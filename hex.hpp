@@ -42,7 +42,6 @@ class HexType
 {
 	 public:
 	 std::string name;
-	 sf::Texture texture;
 	 int difficulty;
 	 bool buildable;
 	 int height;
@@ -52,7 +51,6 @@ class WallType
 {
 	 public:
 	 std::string name;
-	 std::vector<sf::Texture> textures;
 	 bool traversible;
 };
 
@@ -64,6 +62,7 @@ struct hexSettings
 	 int hexHeight;
 	 int hexQuarter;
 	 int hexOffset;
+	 std::string filename;
 };
 
 struct mapSettings
@@ -73,8 +72,12 @@ struct mapSettings
 	 sf::FloatRect viewPort;
 };
 
-sf::Vector2i coordsToPixel(hexSettings set, Coords a);
+sf::Vector2i coordsToPixelI(hexSettings& set, Coords a);
+sf::Vector2f coordsToPixelF(hexSettings& set, Coords a);
 Coords pixelToCoords(sf::Vector2i a);
+
+Coords distance(const Coords& a, const Coords& b);
+int length(const Coords& a, const Coords& b);
 
 class Hex
 {
@@ -85,11 +88,11 @@ class Hex
 	 int m_mode;
 	 int m_building;
 	 std::vector<int> m_borders;
-	 sf::Sprite Shex;
-	 std::vector<sf::Sprite> SHexBorders;
+	 //sf::Sprite Shex;
+	 //std::vector<sf::Sprite> SHexBorders;
 	 
 	 public:
-	 Hex(hexSettings settings, Coords coords, int type, std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
+	 Hex(hexSettings& settings, Coords coords, int type, std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
 
 	 void setType(int type);
 
@@ -97,7 +100,7 @@ class Hex
 
 	 bool switchMode(int newMode);
 
-	 void draw(sf::RenderWindow& window, int mode);
+	 //void draw(sf::RenderWindow& window, int mode);
 	 
 	 const Coords& getCoords()
 		  {return m_coords; }
@@ -112,24 +115,38 @@ class Hex
 		  {return m_borders[border]; }
 };
 
-class Map;
+
+class TileMap: public sf::Drawable, public sf::Transformable
+{
+	 public:
+	 bool load(hexSettings& hSettings, std::map<Coords, Hex>& hexes);
+	 
+	 private:
+	 virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
+	 
+    sf::VertexArray m_vertices;
+    sf::Texture m_tileset;
+};
+				  
+
+class HexMap;
 
 struct Processor // Struct for passing functions to Map::doInRing
 {
-    virtual bool operator()(Map& hexes, Coords coords, int ring, va_list args) = 0;
+    virtual bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) = 0;
 };
 
 struct MakeItType: public Processor // Function for Map::doInRing that changes type
 {
-	 bool operator()(Map& hexes, Coords coords, int ring, va_list args) override;
+	 bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) override;
 };
 
 struct InitIt: public Processor // Function for Map:doInRing that initializes a hex
 {
-	 bool operator()(Map& hexes, Coords coords, int ring, va_list args) override;
+	 bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) override;
 };
 
-class Map
+class HexMap
 {
 	 private:
 	 std::map<Coords, Hex> m_hexes;
@@ -137,14 +154,15 @@ class Map
 	 mapSettings m_mapSettings;
 	 Coords m_start;
 	 int m_mode;
-	 int m_nextRingToGen;
+	 int m_lastRing;
 	 sf::Vector2i m_screenPos;
 	 sf::Vector2i m_topLeftPixel;
 	 sf::Vector2i m_bottomRightPixel;
 	 sf::View m_view;
+	 TileMap m_tilemap;
 
 	 public:
-	 Map(hexSettings hSettings, mapSettings mSettings, Coords start = {0, 0});
+	 HexMap(hexSettings& hSettings, mapSettings& mSettings, Coords start = {0, 0});
 	 
 	 bool initHex(Coords coords);
 		  
@@ -166,6 +184,8 @@ class Map
 	 void generateUpTo(int upTo);
 
 	 void switchMode(int newMode) {m_mode = newMode; }
+
+	 bool createMap();
 
 	 bool moveScreen(sf::Vector2f direction);
 

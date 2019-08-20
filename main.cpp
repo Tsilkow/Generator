@@ -18,48 +18,32 @@ int main()
 {
 	 srand(time(NULL));
 	 
-	 int fpsLimit = 60;
 	 sf::Vector2i resolution(1200, 900);
 
 	 bool exit = false;
 	 clock_t frameStart = clock();
 	 clock_t frameEnd;
 	 float fps;
-	 int gameState=1;
+	 int gameState = 1;
 	 sf::Vector2i screenPos(0, 0);
 	 bool hasFocus = true;
 	 
 	 sf::RenderWindow window(sf::VideoMode(resolution.x, resolution.y), "Generator");
+	 window.setFramerateLimit(60);
 	 sf::Event event;
-
-	 sf::Texture plainsTex;
-	 plainsTex.loadFromFile("data/hexPlains.png");
-	 sf::Texture wastelandTex;
-	 wastelandTex.loadFromFile("data/hexWasteland.png");
-	 sf::Texture forestTex;
-	 forestTex.loadFromFile("data/hexForest.png");
-	 sf::Texture mountainTex;
-	 mountainTex.loadFromFile("data/hexMountain.png");
-	 sf::Texture urbanTex;
-	 urbanTex.loadFromFile("data/hexUrban.png");
-
-	 vector<sf::Texture> wallBorderTex(6);
-	 for(int i = 0; i < 6; ++i)
-	 {
-		  wallBorderTex[i].loadFromFile("data/borderWall" + to_string(i) + ".png");
-	 }
 	 
 	 hexSettings hexData = {
-		  {{"plains", plainsTex, 3, true, 0},
-			{"wasteland", wastelandTex, 4, false, 0},
-			{"forest", forestTex, 4, false, 1},
-			{"mountain", mountainTex, 0, false, 5},
-			{"urban", urbanTex, 2, true, 2}},
-		  {{"wall", wallBorderTex, false}},
+		  {{"plains", 3, true, 0},
+			{"wasteland", 4, false, 0},
+			{"forest", 4, false, 1},
+			{"mountain", 0, false, 5},
+			{"urban", 2, true, 2}},
+		  {{"wall", false}},
 		  120, // hexWidth
 		  104, // hexHeight
 		  30,  // hexQuarter
 		  30,  // hexOffset
+		  "data/tileset.png"
 	 };
 
 	 mapSettings mapData = {
@@ -70,76 +54,74 @@ int main()
 
 	 int count = 0;
 	 
-	 Map testMap(hexData, mapData, Coords(0, 0));
+	 HexMap testMap(hexData, mapData, Coords(0, 0));
+	 sf::Clock clock;
+	 float lastTime = 0;
 
 	 while(!exit)
-	 {	  
-		  if(((float)(frameEnd - frameStart))/((float)(CLOCKS_PER_SEC)) > 1.0/fpsLimit)
+	 {
+		  
+		  ++count;
+		  switch(gameState)
 		  {
-				++count;
-				fps = 1.0/(((float)(frameEnd - frameStart))/((float)(CLOCKS_PER_SEC)));
-				//cout << fps << endl;
-				frameStart = clock();
-				switch(gameState)
-				{
-					 case 0:
-						  break;
-					 case 1:
+				case 0:
+					 break;
+				case 1:
 
-						  while(window.pollEvent(event))
+					 while(window.pollEvent(event))
+					 {
+						  switch (event.type)
 						  {
-								switch (event.type)
-								{
-									 case sf::Event::Closed:
-										  exit = true;
-										  break;
-									 case sf::Event::LostFocus:
-										  hasFocus = false;
-										  break;
-									 case sf::Event::GainedFocus:
-										  hasFocus = true;
-										  break;
-									 case sf::Event::KeyPressed:
-										  if(hasFocus)
+								case sf::Event::Closed:
+									 exit = true;
+									 break;
+								case sf::Event::LostFocus:
+									 hasFocus = false;
+									 break;
+								case sf::Event::GainedFocus:
+									 hasFocus = true;
+									 break;
+								case sf::Event::KeyPressed:
+									 if(hasFocus)
+									 {
+										  switch(event.key.code)
 										  {
-												switch(event.key.code)
-												{
-													 case sf::Keyboard::Escape:
-														  window.close();
-														  exit = true;
-														  break;
-														  /*case sf::Keyboard::Tab:
-														  ++mapMode;
-														  mapMode %= TOModes;
-														  break;*/
-												}
+												case sf::Keyboard::Escape:
+													 window.close();
+													 exit = true;
+													 break;
+													 /*case sf::Keyboard::Tab:
+														++mapMode;
+														mapMode %= TOModes;
+														break;*/
 										  }
-										  break;
-								}
+									 }
+									 break;
 						  }
+					 }
 
-						  if(hasFocus)
-						  {
-								if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up   ))
-									 testMap.moveScreen(sf::Vector2f( 0.f, -1.f));
-								if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-									 testMap.moveScreen(sf::Vector2f(+1.f,  0.f));
-								if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down ))
-									 testMap.moveScreen(sf::Vector2f( 0.f,  1.f));
-								if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left ))
-									 testMap.moveScreen(sf::Vector2f(-1.f,  0.f));
-						  }
+					 if(hasFocus)
+					 {
+						  if(sf::Keyboard::isKeyPressed(sf::Keyboard::Up   ))
+								testMap.moveScreen(sf::Vector2f( 0.f, -1.f));
+						  if(sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+								testMap.moveScreen(sf::Vector2f(+1.f,  0.f));
+						  if(sf::Keyboard::isKeyPressed(sf::Keyboard::Down ))
+								testMap.moveScreen(sf::Vector2f( 0.f,  1.f));
+						  if(sf::Keyboard::isKeyPressed(sf::Keyboard::Left ))
+								testMap.moveScreen(sf::Vector2f(-1.f,  0.f));
+					 }
 
-						  window.clear();
+					 window.clear();
 
-						  testMap.draw(window);
+					 testMap.draw(window);
 
-						  window.display();
-						  break;
-				}
+					 window.display();
+					 /*float currentTime = clock.restart().asSeconds();
+					 float fps = 1.f/(currentTime);
+					 cout << fps << std::endl;*/
+					 break;
 		  }
-		  frameEnd = clock();
-		  if(count >= 3) exit = true;
 	 }
 	 window.close();
 }
