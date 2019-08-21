@@ -11,59 +11,8 @@
 #include <stdarg.h>
 #include <utility>
 
+#include "coords.hpp"
 
-struct Coords // x + y + z = 0 | x = r | y = q
-{
-	 int m_r; // row
-	 int m_q; // collumn
-
-	 Coords(int r, int q): m_r(r), m_q(q) {; }
-
-	 sf::Vector2i rq() {return sf::Vector2i(m_r, m_q); }
-	 sf::Vector3i xyz() {return sf::Vector3i(m_r, m_q, -m_r -m_q); }
-	 int x() {return m_r; }
-	 int y() {return m_q; }
-	 int z() {return -m_r -m_q; }
-	 void print() {std::cout << "(" << m_r << ", " << m_q << ", " << -m_r -m_q << ") " << std::endl; }
-};
-
-bool operator==(const Coords a, const Coords b);
-bool operator!=(const Coords a, const Coords b);
-bool operator>(const Coords a, const Coords b);
-bool operator<(const Coords a, const Coords b);
-void operator+=(Coords& a, Coords b);
-Coords operator+(Coords a, Coords b);
-Coords operator-(Coords a, Coords b);
-Coords operator*(Coords a, int f);
-
-Coords direction(int i);
-
-class HexType
-{
-	 public:
-	 std::string name;
-	 int difficulty;
-	 bool buildable;
-	 int height;
-};
-
-class WallType
-{
-	 public:
-	 std::string name;
-	 bool traversible;
-};
-
-struct hexSettings
-{
-	 std::vector<HexType> hexTypes;
-	 std::vector<WallType> wallTypes;
-	 int hexWidth;
-	 int hexHeight;
-	 int hexQuarter;
-	 int hexOffset;
-	 std::string filename;
-};
 
 struct mapSettings
 {
@@ -71,13 +20,6 @@ struct mapSettings
 	 sf::Vector2i viewSize;
 	 sf::FloatRect viewPort;
 };
-
-sf::Vector2i coordsToPixelI(hexSettings& set, Coords a);
-sf::Vector2f coordsToPixelF(hexSettings& set, Coords a);
-Coords pixelToCoords(sf::Vector2i a);
-
-Coords distance(const Coords& a, const Coords& b);
-int length(const Coords& a, const Coords& b);
 
 class Hex
 {

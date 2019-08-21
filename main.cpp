@@ -9,6 +9,7 @@
 #include <queue>
 
 #include "tom.hpp"
+#include "coords.hpp"
 #include "hex.hpp"
 
 using namespace std;
@@ -45,6 +46,15 @@ int main()
 		  30,  // hexOffset
 		  "data/tileset.png"
 	 };
+
+	 /*for(int i = 0; i < 6; ++i)
+	 {
+		  direction(i).print();
+		  cout << " = px(" << coordsToPixelI(hexData, direction(i)).x << ", "
+				 << coordsToPixelI(hexData, direction(i)).y << ") = ";
+		  pixelToCoords(hexData, coordsToPixelI(hexData, direction(i))).print();
+		  cout << endl;
+	 }*/
 
 	 mapSettings mapData = {
 		  5.f,

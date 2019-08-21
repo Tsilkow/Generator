@@ -6,70 +6,9 @@
 #include <SFML/Window.hpp>
 #include <SFML/Audio.hpp>
 
+#include "coords.hpp"
 #include "hex.hpp"
 
-
-bool operator==(const Coords a, const Coords b) {return (a.m_r == b.m_r && a.m_q == b.m_q); }
-bool operator!=(const Coords a, const Coords b) {return !(a == b); }
-bool operator>(const Coords a, const Coords b)
-{
-	 if(a.m_q == b.m_q) return (a.m_r > b.m_r);
-	 return (a.m_q > b.m_q);
-}
-bool operator<(const Coords a,const  Coords b)
-{
-	 return (a != b && !(a > b));
-}
-void operator+=(Coords& a, Coords b) {a.m_r += b.m_r; a.m_q += b.m_q; }
-Coords operator+(Coords a, Coords b) {return Coords(a.m_r + b.m_r, a.m_q + b.m_q); }
-Coords operator-(Coords a, Coords b) {return Coords(a.m_r - b.m_r, a.m_q - b.m_q); }
-Coords operator*(Coords a, int f) {return Coords(a.x() * f, a.y() * f); }
-
-Coords direction(int i)
-{
-	 switch(i)
-	 {
-		  case 0:  return Coords(+1, -1); break;
-		  case 1:  return Coords(+1,  0); break;
-		  case 2:  return Coords( 0, +1); break;
-		  case 3:  return Coords(-1, +1); break;
-		  case 4:  return Coords(-1,  0); break;
-		  case 5:  return Coords( 0, -1); break;
-		  default: return Coords( 0,  0); break;
-	 }
-}
-
-sf::Vector2i coordsToPixelI(hexSettings& set, Coords a)
-{
-	 int x = (set.hexWidth - set.hexQuarter)  * (-a.z());
-	 int y = set.hexHeight * (a.y() - a.x())/2;
-
-	 return sf::Vector2i(x, y);
-}
-
-sf::Vector2f coordsToPixelF(hexSettings& set, Coords a)
-{
-	 float x = (set.hexWidth - set.hexQuarter)  * (-a.z());
-	 float y = set.hexHeight * (a.y() - a.x())/2;
-
-	 return sf::Vector2f(x, y);
-}
-
-/*Coords pixelToCoords(hexSettings set, sf::Vector2i a)
-{
-	 Coords result(a.y/set.hexWidth, )
-}*/
-
-Coords distance(const Coords& a, const Coords& b)
-{
-	 return Coords(b.m_r - a.m_r, b.m_q - a.m_q);
-}
-
-int length(const Coords& a, const Coords& b)
-{
-	 Coords temp = distance(a, b);
-	 return std::max(std::max(temp.x(), temp.y()), temp.z());
-}
 
 Hex::Hex(hexSettings& settings, Coords coords, int type, std::vector<int> borders):
 	 m_settings(settings),

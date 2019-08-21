@@ -11,9 +11,13 @@ itemName[1]="tom";
 attributes[1]="\E[1m\E[97m";
 itemCompilation[1]="-c tom.cpp -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
-itemName[2]="hex";
+itemName[2]="coords";
 attributes[2]="\E[1m\E[34m";
-itemCompilation[2]="-c hex.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+itemCompilation[2]="-c coords.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+
+itemName[3]="hex";
+attributes[3]="\E[1m\E[94m";
+itemCompilation[3]="-c hex.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
 function compileLibrary
 {
