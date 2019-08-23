@@ -12,11 +12,13 @@
 #include <utility>
 
 #include "coords.hpp"
+#include "generator.hpp"
 
 
 struct mapSettings
 {
 	 float scrollSpeed;
+	 float zoomSpeed;
 	 sf::Vector2i viewSize;
 	 sf::FloatRect viewPort;
 };
@@ -26,7 +28,9 @@ class Hex
 	 private:
 	 hexSettings m_settings;
 	 Coords m_coords;
+	 int m_height;
 	 int m_type;
+	 std::vector<int> m_water;
 	 int m_mode;
 	 int m_building;
 	 std::vector<int> m_borders;
@@ -34,7 +38,8 @@ class Hex
 	 //std::vector<sf::Sprite> SHexBorders;
 	 
 	 public:
-	 Hex(hexSettings& settings, Coords coords, int type, std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
+	 Hex(hexSettings& settings, Coords coords, int height, int type, std::vector<int> water,
+		  std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
 
 	 void setType(int type);
 
@@ -46,9 +51,15 @@ class Hex
 	 
 	 const Coords& getCoords()
 		  {return m_coords; }
+
+	 const int& getHeight()
+		  {return m_height; }
 	 
 	 const int& getType()
 		  {return m_type; }
+
+	 const std::vector<int>& getWater()
+		  {return m_water; }
 
 	 const int& getBuilding()
 		  {return m_building; }
@@ -83,10 +94,10 @@ struct MakeItType: public Processor // Function for Map::doInRing that changes t
 	 bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) override;
 };
 
-struct InitIt: public Processor // Function for Map:doInRing that initializes a hex
+/*struct InitIt: public Processor // Function for Map:doInRing that initializes a hex
 {
 	 bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) override;
-};
+};*/
 
 class HexMap
 {
@@ -94,6 +105,7 @@ class HexMap
 	 std::map<Coords, Hex> m_hexes;
 	 hexSettings m_hexSettings;
 	 mapSettings m_mapSettings;
+	 genSettings m_genSettings;
 	 Coords m_start;
 	 int m_mode;
 	 int m_lastRing;
@@ -104,9 +116,7 @@ class HexMap
 	 TileMap m_tilemap;
 
 	 public:
-	 HexMap(hexSettings& hSettings, mapSettings& mSettings, Coords start = {0, 0});
-	 
-	 bool initHex(Coords coords);
+	 HexMap(hexSettings& hSettings, mapSettings& mSettings, genSettings& gSettings, Coords start = {0, 0});
 		  
 	 bool setType(Coords coords, int type);
 
@@ -122,14 +132,14 @@ class HexMap
 					 doInRing(coords, ring, allowEmpty, operation, std::forward<T>(args)...);
 				}
 		  }
-	 
-	 void generateUpTo(int upTo);
+
+	 void createMap();
 
 	 void switchMode(int newMode) {m_mode = newMode; }
 
-	 bool createMap();
-
 	 bool moveScreen(sf::Vector2f direction);
+	 
+	 bool zoomScreen(bool in);
 
 	 void draw(sf::RenderWindow& window);
 

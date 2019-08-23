@@ -18,8 +18,8 @@ bool operator!=(const Coords a, const Coords b)
 
 bool operator>(const Coords a, const Coords b)
 {
-	 if(a.m_q == b.m_q) return (a.m_r > b.m_r);
-	 return (a.m_q > b.m_q);
+	 if(a.priority() == b.priority()) return (a.m_r > b.m_r);
+	 return (a.priority() < b.priority());
 }
 
 bool operator<(const Coords a,const  Coords b)
@@ -51,52 +51,60 @@ Coords direction(int i)
 {
 	 switch(i)
 	 {
-		  case 0:  return Coords(+1, -1); break;
+		  case 0:  return Coords( 0, +1); break;
 		  case 1:  return Coords(+1,  0); break;
-		  case 2:  return Coords( 0, +1); break;
-		  case 3:  return Coords(-1, +1); break;
+		  case 2:  return Coords(+1, -1); break;
+		  case 3:  return Coords( 0, -1); break;
 		  case 4:  return Coords(-1,  0); break;
-		  case 5:  return Coords( 0, -1); break;
+		  case 5:  return Coords(-1, +1); break;
 		  default: return Coords( 0,  0); break;
 	 }
 }
 
 sf::Vector2i coordsToPixelI(hexSettings& set, Coords a)
 {
-	 int x = (set.hexWidth - set.hexQuarter)  * a.x() - set.hexWidth/2;
-	 int y = set.hexHeight * (a.z() - a.y())/2 - set.hexHeight/2;
+	 int x = std::round((set.hexWidth - set.hexQuarter)  * a.x() - set.hexWidth/2.f);
+	 int y = std::round(set.hexHeight * (a.z() - a.y())/2.f - set.hexHeight/2.f);
 
 	 return sf::Vector2i(x, y);
 }
 
 sf::Vector2f coordsToPixelF(hexSettings& set, Coords a)
 {
-	 float x = (set.hexWidth - set.hexQuarter)  * a.x() - set.hexWidth/2;
-	 float y = set.hexHeight * (a.z() - a.y())/2 - set.hexHeight/2;
+	 float x = std::round((set.hexWidth - set.hexQuarter)  * a.x() - set.hexWidth/2.f);
+	 float y = std::round(set.hexHeight * (a.z() - a.y())/2.f - set.hexHeight/2.f);
 
 	 return sf::Vector2f(x, y);
 }
 
-sf::Vector2f coordsToCenter(hexSettings& set, Coords a)
+sf::Vector2i coordsToCenter(hexSettings& set, Coords a)
 {
-	 float x = (set.hexWidth - set.hexQuarter)  * a.x();
-	 float y = set.hexHeight * (a.z() - a.y())/2;
+	 int x = (set.hexWidth - set.hexQuarter)  * a.x();
+	 int y = std::round(set.hexHeight * (a.z() - a.y())/2.f);
 
-	 return sf::Vector2f(x, y);
+	 return sf::Vector2i(x, y);
 }
 
 Coords pixelToCoords(hexSettings& set, sf::Vector2i a)
 {
-	 int r = (a.x + set.hexWidth/2) / (set.hexWidth - set.hexQuarter);
-	 int q = std::round(((a.y + set.hexHeight/2.f) / set.hexHeight + r/2.f)) * -1;
+	 int r = std::round(((float)a.x + set.hexWidth/2.f) / (set.hexWidth - set.hexQuarter));
+	 int q = std::round((((float)a.y + set.hexHeight/2.f) / set.hexHeight + r/2.f)) * -1;
 
 	 return Coords(r, q);
 }
 
 Coords pixelToCoords(hexSettings& set, sf::Vector2f a)
 {
-	 int r = (a.x + set.hexWidth/2) / (set.hexWidth - set.hexQuarter);
-	 int q = std::round(((a.y + set.hexHeight/2.f) / set.hexHeight + r/2.f)) * -1;
+	 int r = std::round(((float)a.x + set.hexWidth/2) / (set.hexWidth - set.hexQuarter));
+	 int q = std::round((((float)a.y + set.hexHeight/2.f) / set.hexHeight + r/2.f)) * -1;
+
+	 return Coords(r, q);
+}
+
+Coords centerToCoords(hexSettings& set, sf::Vector2i a)
+{
+	 int r = std::round(((float)a.x) / (set.hexWidth - set.hexQuarter));
+	 int q = std::round((((float)a.y) / set.hexHeight + r/2.f)) * -1;
 
 	 return Coords(r, q);
 }
@@ -106,8 +114,7 @@ Coords distance(const Coords& a, const Coords& b)
 	 return Coords(b.m_r - a.m_r, b.m_q - a.m_q);
 }
 
-int length(const Coords& a, const Coords& b)
+int length(Coords a)
 {
-	 Coords temp = distance(a, b);
-	 return std::max(std::max(temp.x(), temp.y()), temp.z());
+	 return std::max(std::max(std::abs(a.x()), std::abs(a.y())), std::abs(a.z()));
 }

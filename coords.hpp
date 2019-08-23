@@ -19,9 +19,10 @@ struct Coords
 
 	 sf::Vector2i rq() {return sf::Vector2i(m_r, m_q); } // axial coordinates
 	 sf::Vector3i xyz() {return sf::Vector3i(m_r, m_q, -m_r -m_q); } // cube coordinates
-	 int x() {return m_r; } // x from cube coords
-	 int y() {return m_q; } // y from cube coords
-	 int z() {return -m_r -m_q; } // z from cub coords
+	 const int x() const {return m_r; } // x from cube coords
+	 const int y() const {return m_q; } // y from cube coords
+	 const int z() const {return -m_r -m_q; } // z from cub coords
+	 const int priority() const {return 2 * m_q + m_r; }
 	 void print() {std::cout << "(" << m_r << ", " << m_q << ", " << -m_r -m_q << ") " << std::endl; }
 };
 
@@ -65,7 +66,10 @@ struct hexSettings
 
 sf::Vector2i coordsToPixelI(hexSettings& set, Coords a);
 sf::Vector2f coordsToPixelF(hexSettings& set, Coords a);
+sf::Vector2i coordsToCenter(hexSettings& set, Coords a);
 Coords pixelToCoords(hexSettings& set, sf::Vector2i a);
+Coords pixelToCoords(hexSettings& set, sf::Vector2f a);
+Coords centerToCoords(hexSettings& set, sf::Vector2i a);
 
 Coords distance(const Coords& a, const Coords& b); // coords of b shown with a as (0, 0, 0)
-int length(const Coords& a, const Coords& b); // length between a and b
+int length(Coords a); // length of a

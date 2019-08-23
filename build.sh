@@ -15,9 +15,13 @@ itemName[2]="coords";
 attributes[2]="\E[1m\E[34m";
 itemCompilation[2]="-c coords.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
-itemName[3]="hex";
-attributes[3]="\E[1m\E[94m";
-itemCompilation[3]="-c hex.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+itemName[3]="generator";
+attributes[3]="\E[1m\E[93m";
+itemCompilation[3]="-c generator.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+
+itemName[4]="hex";
+attributes[4]="\E[1m\E[94m";
+itemCompilation[4]="-c hex.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
 function compileLibrary
 {

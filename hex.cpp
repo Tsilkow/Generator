@@ -10,9 +10,12 @@
 #include "hex.hpp"
 
 
-Hex::Hex(hexSettings& settings, Coords coords, int type, std::vector<int> borders):
+Hex::Hex(hexSettings& settings, Coords coords, int height, int type, std::vector<int> water,
+			std::vector<int> borders):
 	 m_settings(settings),
 	 m_coords(coords),
+	 m_height(height),
+	 m_water(water),
 	 m_mode(0)
 {
 	 // Representation intializations
@@ -77,7 +80,7 @@ bool Hex::switchMode(int newMode)
 
 bool TileMap::load(hexSettings& hSettings, std::map<Coords, Hex>& hexes)
 {
-	 int count = 0;
+	 float heightFactor;
 	 
 	 sf::Vector2f tileSize(hSettings.hexWidth  + 2 * hSettings.hexOffset,
 								  hSettings.hexHeight + 2 * hSettings.hexOffset);
@@ -87,34 +90,68 @@ bool TileMap::load(hexSettings& hSettings, std::map<Coords, Hex>& hexes)
 
 	 // resize the vertex array to fit the level size
 	 m_vertices.setPrimitiveType(sf::Quads);
-	 m_vertices.resize(hexes.size() * 4);
+	 //m_vertices.resize(hexes.size() * 4);
 
 	 // populate the vertex array, with one quad per tile
 	 for(auto it = hexes.begin(); it != hexes.end(); ++it)
 	 {
-		  // define its 4 corners
-		  m_vertices[count    ].position =
-				coordsToPixelF(hSettings, it->first);
-		  m_vertices[count + 1].position =
-				coordsToPixelF(hSettings, it->first) + sf::Vector2f(tileSize.x, 0.f);
-		  m_vertices[count + 2].position =
-				coordsToPixelF(hSettings, it->first) + tileSize;
-		  m_vertices[count + 3].position =
-				coordsToPixelF(hSettings, it->first) + sf::Vector2f(0.f, tileSize.y);
+		  heightFactor = std::round((1.f - it->second.getHeight()*0.1f) * 255);
+		  // hex types
+		  m_vertices.append(sf::Vertex(
+										coordsToPixelF(hSettings, it->first) +
+										sf::Vector2f(0.f, -it->second.getHeight()*20),
+										sf::Color(heightFactor, heightFactor, heightFactor),
+										sf::Vector2f( it->second.getType()      * (tileSize.x + 1)    ,
+														  0.f)));
+		  
+		  m_vertices.append(sf::Vertex(
+										coordsToPixelF(hSettings, it->first) +
+										sf::Vector2f(tileSize.x, -it->second.getHeight()*20),
+										sf::Color(heightFactor, heightFactor, heightFactor),
+										sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1,
+														 0.f)));
+								  
+		  m_vertices.append(sf::Vertex(
+										coordsToPixelF(hSettings, it->first) +
+										sf::Vector2f(tileSize.x, tileSize.y - it->second.getHeight()*20),
+										sf::Color(heightFactor, heightFactor, heightFactor),
+										sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1,
+														 tileSize.y)));
+		  
+		  m_vertices.append(sf::Vertex(
+										coordsToPixelF(hSettings, it->first) +
+										sf::Vector2f(0.f, tileSize.y - it->second.getHeight()*20),
+										sf::Color(heightFactor, heightFactor, heightFactor),
+										sf::Vector2f( it->second.getType()      * (tileSize.x + 1)    ,
+														  tileSize.y)));
 
-		  if(it->second.getType() >= 0)
+		  for(int i = 0; i < it->second.getWater().size(); ++i)
 		  {
-				// define its 4 texture coordinates
-			    m_vertices[count    ].texCoords =
-					  sf::Vector2f( it->second.getType()      * (tileSize.x + 1)    , 0.f);
-			    m_vertices[count + 1].texCoords =
-					  sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1, 0.f);
-				 m_vertices[count + 2].texCoords =
-					  sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1, tileSize.y);
-				 m_vertices[count + 3].texCoords =
-					  sf::Vector2f( it->second.getType()      * (tileSize.x + 1)    , tileSize.y);
+				// rivers
+				m_vertices.append(sf::Vertex(
+											 coordsToPixelF(hSettings, it->first) +
+											 sf::Vector2f(0.f, -it->second.getHeight()*10),
+											 sf::Vector2f( it->second.getWater()[i]      * (tileSize.x + 1)    ,
+																(tileSize.y + 1) * 2)));
+		  
+				m_vertices.append(sf::Vertex(
+											 coordsToPixelF(hSettings, it->first) +
+											 sf::Vector2f(tileSize.x, -it->second.getHeight()*10),
+											 sf::Vector2f((it->second.getWater()[i] + 1) * (tileSize.x + 1) - 1,
+															  (tileSize.y + 1) * 2)));
+								  
+				m_vertices.append(sf::Vertex(
+											 coordsToPixelF(hSettings, it->first) +
+											 sf::Vector2f(tileSize.x, tileSize.y - it->second.getHeight()*10),
+											 sf::Vector2f((it->second.getWater()[i] + 1) * (tileSize.x + 1) - 1,
+															  (tileSize.y + 1) * 3 - 1)));
+		  
+				m_vertices.append(sf::Vertex(
+											 coordsToPixelF(hSettings, it->first) +
+											 sf::Vector2f(0.f, tileSize.y - it->second.getHeight()*10),
+											 sf::Vector2f( it->second.getWater()[i]      * (tileSize.x + 1)    ,
+																(tileSize.y + 1) * 3 - 1)));
 		  }
-		  count += 4;
 	 }
 
 	 return true;
@@ -141,28 +178,18 @@ void TileMap::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }*/
 
 
-HexMap::HexMap(hexSettings& hSettings, mapSettings& mSettings, Coords start):
+HexMap::HexMap(hexSettings& hSettings, mapSettings& mSettings, genSettings& gSettings, Coords start):
 	 m_hexSettings(hSettings),
 	 m_mapSettings(mSettings),
+	 m_genSettings(gSettings),
 	 m_start(start),
 	 m_screenPos(0, 0),
 	 m_mode(0),
 	 m_lastRing(-1)
 {
 	 m_view = sf::View(sf::Vector2f(m_screenPos), sf::Vector2f(m_mapSettings.viewSize));
-	 generateUpTo(6);
+	 createMap();
 	 m_tilemap.load(m_hexSettings, m_hexes);
-}
-
-bool HexMap::initHex(Coords coords)
-{
-	 m_topLeftPixel.x     = std::min(coordsToPixelI(m_hexSettings, coords).x, m_topLeftPixel.x    );
-	 m_topLeftPixel.y     = std::min(coordsToPixelI(m_hexSettings, coords).y, m_topLeftPixel.y    );
-	 m_bottomRightPixel.x = std::max(coordsToPixelI(m_hexSettings, coords).x, m_bottomRightPixel.x);
-	 m_bottomRightPixel.y = std::max(coordsToPixelI(m_hexSettings, coords).y, m_bottomRightPixel.y);
-	 
-	 m_hexes.insert(std::pair<Coords, Hex>(coords, Hex(m_hexSettings, coords, 0)));
-	 return true;
 }
 
 bool HexMap::setType(Coords coords, int type)
@@ -220,18 +247,24 @@ int HexMap::doInRing(Coords coords, int ring, bool allowEmpty, Processor& operat
 	 return count;
 }
 
-void HexMap::generateUpTo(int upTo)
+void HexMap::createMap()
 {
-	 InitIt initProc;
-	 MakeItType makeProc;
-	 for(int i = m_lastRing+1; i <= upTo; ++i)
-	 {
-		  doInRing(m_start, i, true , initProc);
-		  doInRing(m_start, i, true , makeProc, 0);
-	 }
-	 m_lastRing = upTo;
-
+	 std::map<Coords, tempHex> result;
 	 
+	 generate(result, m_hexSettings, m_genSettings);
+
+	 for(auto it = result.begin(); it != result.end(); ++it)
+	 {
+		  m_topLeftPixel.x     = std::min(coordsToPixelI(m_hexSettings, it->first).x, m_topLeftPixel.x    );
+		  m_topLeftPixel.y     = std::min(coordsToPixelI(m_hexSettings, it->first).y, m_topLeftPixel.y    );
+		  m_bottomRightPixel.x = std::max(coordsToPixelI(m_hexSettings, it->first).x, m_bottomRightPixel.x);
+		  m_bottomRightPixel.y = std::max(coordsToPixelI(m_hexSettings, it->first).y, m_bottomRightPixel.y);
+		  
+		  /*std::cout << */
+		  m_hexes.insert(std::pair<Coords, Hex>
+							  (it->first, Hex(m_hexSettings, it->first, it->second.height, it->second.type,
+												  it->second.water)));/*).second << std::endl;*/
+	 }
 }
 
 bool HexMap::moveScreen(sf::Vector2f direction)
@@ -249,6 +282,13 @@ bool HexMap::moveScreen(sf::Vector2f direction)
 	 return true;
 }
 
+bool HexMap::zoomScreen(bool in)
+{
+	 m_view.zoom(1.f + (1-2*in) * m_mapSettings.zoomSpeed);
+
+	 return true;
+}
+
 void HexMap::draw(sf::RenderWindow& window)
 {
 	 m_view.setCenter(sf::Vector2f(m_screenPos));
@@ -258,10 +298,10 @@ void HexMap::draw(sf::RenderWindow& window)
 }
 
 
-bool InitIt::operator()(HexMap& hexes, Coords coords, int ring, va_list args)
+/*bool InitIt::operator()(HexMap& hexes, Coords coords, int ring, va_list args)
 {
 	 return (hexes.initHex(coords));
-}
+}*/
 
 bool MakeItType::operator()(HexMap& hexes, Coords coords, int ring, va_list args)
 {
