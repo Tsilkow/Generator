@@ -6,13 +6,13 @@ projectColor="\E[1m\E[30m\E[46m";
 itemName[1]="tom";
 attributes[1]="\E[1m\E[97m";
 
-itemName[2]="coords";
+itemName[2]="hex";
 attributes[2]="\E[1m\E[34m";
 
 itemName[3]="generator";
 attributes[3]="\E[1m\E[93m";
 
-itemName[4]="hex";
+itemName[4]="hexmap";
 attributes[4]="\E[1m\E[94m";
 
 

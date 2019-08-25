@@ -4,24 +4,77 @@
 #include <vector>
 #include <math.h>
 #include <SFML/System.hpp>
-#include <SFML/Graphics.hpp>
-#include <SFML/Window.hpp>
-#include <SFML/Audio.hpp>
-#include <unordered_map>
-#include <stdarg.h>
-#include <utility>
-
-#include "coords.hpp"
-#include "generator.hpp"
 
 
-struct mapSettings
+struct Coords 
 {
-	 float scrollSpeed;
-	 float zoomSpeed;
-	 sf::Vector2i viewSize;
-	 sf::FloatRect viewPort;
+	 // This struct is for coordinates storage. It stores axial coordinates, but easily converts them to
+	 // cube ones.
+	 // if 0 degrees starts on the right, then:
+	 // +x = 0 deg, +y = 120 deg, +z = 240 deg
+	 int m_r; // row
+	 int m_q; // collumn
+
+	 Coords() {; }
+	 Coords(int r, int q): m_r(r), m_q(q) {; }
+
+	 sf::Vector2i rq() {return sf::Vector2i(m_r, m_q); } // axial coordinates
+	 sf::Vector3i xyz() {return sf::Vector3i(m_r, m_q, -m_r -m_q); } // cube coordinates
+	 const int x() const {return m_r; } // x from cube coords
+	 const int y() const {return m_q; } // y from cube coords
+	 const int z() const {return -m_r -m_q; } // z from cub coords
+	 const int priority() const {return 2 * m_q + m_r; }
+	 void print() {std::cout << "(" << m_r << ", " << m_q << ", " << -m_r -m_q << ") " << std::endl; }
 };
+
+bool operator==(const Coords a, const Coords b);
+bool operator!=(const Coords a, const Coords b);
+bool operator>(const Coords a, const Coords b);
+bool operator<(const Coords a, const Coords b);
+void operator+=(Coords& a, Coords b);
+Coords operator+(Coords a, Coords b);
+Coords operator-(Coords a, Coords b);
+Coords operator*(Coords a, int f);
+
+Coords direction(int i);
+
+class HexType
+{
+	 public:
+	 std::string name;
+	 int difficulty; // difficulty of traversing
+	 bool buildable;
+	 int height;
+};
+
+class WallType
+{
+	 public:
+	 std::string name;
+	 bool traversible;
+};
+
+struct hexSettings // parameters to convert to and from Coords system
+{
+	 std::vector<HexType> hexTypes;
+	 std::vector<WallType> wallTypes;
+	 int hexWidth;
+	 int hexHeight;
+	 int hexQuarter;
+	 int hexOffset;
+};
+
+sf::Vector2i coordsToPixelI(hexSettings& set, Coords a);
+sf::Vector2f coordsToPixelF(hexSettings& set, Coords a);
+sf::Vector2i coordsToCenter(hexSettings& set, Coords a);
+Coords pixelToCoords(hexSettings& set, sf::Vector2i a);
+Coords pixelToCoords(hexSettings& set, sf::Vector2f a);
+Coords centerToCoords(hexSettings& set, sf::Vector2i a);
+
+Coords distance(const Coords& a, const Coords& b); // coords of b shown with a as (0, 0, 0)
+int length(Coords a); // length of a
+
+
 
 class Hex
 {
@@ -31,21 +84,22 @@ class Hex
 	 int m_height;
 	 int m_type;
 	 std::vector<int> m_water;
-	 int m_mode;
 	 int m_building;
 	 std::vector<int> m_borders;
-	 //sf::Sprite Shex;
-	 //std::vector<sf::Sprite> SHexBorders;
 	 
 	 public:
-	 Hex(hexSettings& settings, Coords coords, int height, int type, std::vector<int> water,
+	 //Hex() {; }
+		  
+	 Hex(hexSettings& settings, Coords coords, int height = 0, int type = 0, std::vector<int> water = {},
 		  std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
 
 	 void setType(int type);
+	 
+	 void setHeight(int height);
+	 
+	 void addWater(int newWater);
 
 	 void setBorder(int border, int type);
-
-	 bool switchMode(int newMode);
 
 	 //void draw(sf::RenderWindow& window, int mode);
 	 
@@ -66,85 +120,4 @@ class Hex
 
 	 const int& getBorder(int border)
 		  {return m_borders[border]; }
-};
-
-
-class TileMap: public sf::Drawable, public sf::Transformable
-{
-	 public:
-	 bool load(hexSettings& hSettings, std::map<Coords, Hex>& hexes);
-	 
-	 private:
-	 virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
-	 
-    sf::VertexArray m_vertices;
-    sf::Texture m_tileset;
-};
-				  
-
-class HexMap;
-
-struct Processor // Struct for passing functions to Map::doInRing
-{
-    virtual bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) = 0;
-};
-
-struct MakeItType: public Processor // Function for Map::doInRing that changes type
-{
-	 bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) override;
-};
-
-/*struct InitIt: public Processor // Function for Map:doInRing that initializes a hex
-{
-	 bool operator()(HexMap& hexes, Coords coords, int ring, va_list args) override;
-};*/
-
-class HexMap
-{
-	 private:
-	 std::map<Coords, Hex> m_hexes;
-	 hexSettings m_hexSettings;
-	 mapSettings m_mapSettings;
-	 genSettings m_genSettings;
-	 Coords m_start;
-	 int m_mode;
-	 int m_lastRing;
-	 sf::Vector2i m_screenPos;
-	 sf::Vector2i m_topLeftPixel;
-	 sf::Vector2i m_bottomRightPixel;
-	 sf::View m_view;
-	 TileMap m_tilemap;
-
-	 public:
-	 HexMap(hexSettings& hSettings, mapSettings& mSettings, genSettings& gSettings, Coords start = {0, 0});
-		  
-	 bool setType(Coords coords, int type);
-
-	 bool setBorder(Coords coords, int border, int type);
-
-	 int doInRing(Coords coords, int ring, bool allowEmpty, Processor& operation, ...);
-
-	 template <typename... T>
-	 int doInHex(Coords coords, int TORings, bool allowEmpty, Processor& operation, T&&... args)
-		  {
-				for(int ring = 0; ring < TORings; ++ring)
-				{
-					 doInRing(coords, ring, allowEmpty, operation, std::forward<T>(args)...);
-				}
-		  }
-
-	 void createMap();
-
-	 void switchMode(int newMode) {m_mode = newMode; }
-
-	 bool moveScreen(sf::Vector2f direction);
-	 
-	 bool zoomScreen(bool in);
-
-	 void draw(sf::RenderWindow& window);
-
-	 
-	 bool doesHexExists(Coords coords) {return (m_hexes.count(coords) > 0); }
-	 
-	 Hex& getHex(Coords coords) {return m_hexes.find(coords)->second; } 
 };

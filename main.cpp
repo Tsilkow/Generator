@@ -9,9 +9,9 @@
 #include <queue>
 
 #include "tom.hpp"
-#include "coords.hpp"
 #include "hex.hpp"
 #include "generator.hpp"
+#include "hexmap.hpp"
 
 using namespace std;
 
@@ -23,23 +23,24 @@ int main()
 	 sf::Vector2i resolution(1200, 900);
 	 
 	 hexSettings hexData = {
-		  {{"water", 0, false, 0},
-			{"plains", 3, true, 0},
-			{"wasteland", 4, false, 0},
-			{"forest", 4, false, 1},
-			{"mountain", 0, false, 5},
-			{"urban", 2, true, 2}},
-		  {{"wall", false}},
-		  120, // hexWidth
-		  104, // hexHeight
-		  30,  // hexQuarter
-		  30,  // hexOffset
-		  "data/tileset.png"
+		  {{"water", 0, false, 0},     // hexTypes[0]
+			{"plains", 3, true, 0},     // hexTypes[1]
+			{"wasteland", 4, false, 0}, // hexTypes[2]
+			{"forest", 4, false, 1},    // hexTypes[3]
+			{"mountain", 0, false, 5},  // hexTypes[4]
+			{"urban", 2, true, 2}},     // hexTypes[5]
+		  {{"wall", false}},           // wallTypes[0]
+		  120,                         // hexWidth
+		  104,                         // hexHeight
+		  30,                          // hexQuarter
+		  30                           // hexOffset
 	 };
+
+	 std::cout << sf::Texture::getMaximumSize() << std::endl;
 
 	 /*for(int i = 0; i < 6; ++i)
 	 {
-\		  direction(i).print();
+		  direction(i).print();
 		  cout << " = px(" << coordsToPixelI(hexData, direction(i)).x << ", "
 				 << coordsToPixelI(hexData, direction(i)).y << ") = ";
 		  pixelToCoords(hexData, coordsToPixelI(hexData, direction(i))).print();
@@ -47,28 +48,42 @@ int main()
 	 }*/
 
 	 mapSettings mapData = {
-		  5.f,                                // scrollSpeed
-		  0.01f,                              // zoomSpeed
-		  resolution,                         // viewSize
-		  sf::FloatRect(0.f, 0.f, 1.f, 1.f)   // viewPort
+		  5.f,                               // scrollSpeed
+		  0.01f,                             // zoomSpeed
+		  resolution,                        // viewSize
+		  sf::FloatRect(0.f, 0.f, 1.f, 1.f), // viewPort
+		  "data/tileset.png",                // filename
+		  10,                                // pixelsPerLevel
+		  0.05f                              // lightPerHeight
 	 };
-
+	 
 	 genSettings genData = {
-		  36,                                       // radius
-		  12,                                        // TORidges
-		  0.1f,                                     // deviation
-		  18,                                       // maxRidgeLength
-		  24,                                       // mountainsRadius
-		  5,                                        // mountainHeight
-		  6,                                        // heightRadius
-		  {{1.0f, 0.f , 0.f , 0.f  , 0.f  , 0.f },  // heightProb[0]
-		   {0.8f, 0.2f, 0.f , 0.f  , 0.f  , 0.f },  //           [1]
-			{0.f , 0.9f, 0.1f, 0.f  , 0.f  , 0.f },  //           [2]
-			{0.f , 0.f , 0.9f, 0.1f , 0.f  , 0.f },  //           [3]
-			{0.f , 0.f , 0.7f, 0.2f , 0.1f , 0.f },  //           [4]
-			{0.f , 0.f , 0.f , 0.45f, 0.45f, 0.1f}}, //           [5]
-		  6,                                        // TORivers
-		  Coords(0, 0)                              // start
+		  /*0,
+		  1,
+		  5,
+		  4,
+		  */
+		  48,                                               // mapRadius
+		  47,                                               // landRadius
+	 	  30,                                               // coastline
+		  30,                                               // mountainsRadius
+	 	  6,                                                // TORidges
+		  0.1f,                                             // deviation
+		  24,                                               // maxRidgeLength
+		  5,                                                // mountainHeight
+	  	  {{1.0f, 0.f , 0.f , 0.f  , 0.f  , 0.f },          // heightProb[0]
+	  	   {0.8f, 0.2f, 0.f , 0.f  , 0.f  , 0.f },          //           [1]
+	  	   {0.f , 0.9f, 0.1f, 0.f  , 0.f  , 0.f },          //           [2]
+	  	   {0.f , 0.f , 0.9f, 0.1f , 0.f  , 0.f },          //           [3]
+	  	   {0.f , 0.f , 0.7f, 0.2f , 0.1f , 0.f },          //           [4]
+	  	   {0.f , 0.f , 0.f , 0.45f, 0.45f, 0.1f}},         //           [5]
+		  12,                                                // TOBuildups
+	     {0.f   , 0.1f, 0.25f, 0.5f, 0.8f, 0.99f, 0.999f}, // buildupProb
+		  6,                                                // TOErosions
+	     {0.001f, 0.4f, 0.5f, 0.75f, 0.9f, 0.99f, 0.999f}, // erosionProb
+		  12,                                                // TORivers
+		  {0.f, 0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f},        // meanderFreq
+		  Coords(0, 0)                                      // start
 	 };
 
 	 int count = 0;

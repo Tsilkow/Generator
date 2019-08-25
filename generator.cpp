@@ -6,11 +6,11 @@
 #include <map>
 
 #include "tom.hpp"
-#include "coords.hpp"
+#include "hex.hpp"
 #include "generator.hpp"
 
 
-Coords randomCoord(int radius, Coords start = {0, 0})
+Coords randomCoord(int radius, Coords start)
 {
 	 int x = RandomI(-radius, radius);
 	 return Coords(x, RandomI(std::max(-x, 0) - radius, std::min(-x, 0) + radius)) + start;
@@ -40,24 +40,30 @@ Coords middle(hexSettings& hSettings, Coords start, Coords end)
 	 return pixelToCoords(hSettings, point);
 }
 
-void addToMap(std::map<Coords, tempHex>& result, std::map<Coords, tempHex> toAdd)
+void addToMap(std::map<Coords, Hex>& result, std::map<Coords, Hex> toAdd, hexSettings& hSettings)
 {
+	 std::map<Coords, Hex>::iterator found;
 	 for(auto it = toAdd.begin(); it != toAdd.end(); ++it)
 	 {
-		  result[it->first] = it->second;
+		  found = result.find(it->first);
+		  if(found == result.end())
+		  {
+				result.insert(*it);
+		  }
+		  else found->second = it->second;
 	 }
 }
 
-void initArea(hexSettings& hSettings, std::map<Coords, tempHex>& result, Coords pos, int radius)
+void initArea(hexSettings& hSettings, std::map<Coords, Hex>& result, Coords pos, int radius)
 {
 	 for(int ring = 0; ring <= radius; ++ring)
 	 {
 		  for(int turn = 0; turn < 6; ++turn)
 		  {
-				if(ring == 0) result.insert(std::pair<Coords, tempHex>(pos, {1, 0}));
+				if(ring == 0) result.insert(std::pair<Coords, Hex>(pos, {hSettings, pos, 0, 0}));
 				for(int i = 0; i < ring; ++i)
 				{
-					 result.insert(std::pair<Coords, tempHex>(pos, {1, 0}));
+					 result.insert(std::pair<Coords, Hex>(pos, {hSettings, pos, 0, 0}));
 					 /*std::cout << "(" << pos.m_r << ", " << pos.m_q << ") =?= {"
 								  << coordsToCenter(hSettings, pos).x << ", "
 								  << coordsToCenter(hSettings, pos).y << "} ";
@@ -74,27 +80,17 @@ void initArea(hexSettings& hSettings, std::map<Coords, tempHex>& result, Coords 
 	 }
 }
 
-void printMap(std::map<Coords, tempHex>& result)
-{
-	 int prevY = result.begin()->first.m_r;
-	 for(auto it = result.begin(); it != result.end(); ++it)
-	 {
-		  if(it->first.m_r != prevY) std::cout << std::endl;
-		  std::cout << it->second.type;
-	 }
-}
-
-std::map<Coords, tempHex> createRidge(
+std::map<Coords, Hex> createRidge(
 	 hexSettings& hSettings, genSettings& gSettings, Coords start, Coords end)
 {
 	 //getchar();
 	 
-	 std::map<Coords, tempHex> result;
+	 std::map<Coords, Hex> result;
 	 Coords middle = {0, 0};
 	 
 	 if(length(distance(start, end)) > 1)
 	 {
-		  
+		  // converting coords into pixels for more natural curves
 		  sf::Vector2i startPixel = coordsToCenter(hSettings, start);
 		  sf::Vector2i endPixel = coordsToCenter(hSettings, end);
 		  sf::Vector2i middlePixel = startPixel + (endPixel - startPixel)/2;
@@ -106,6 +102,7 @@ std::map<Coords, tempHex> createRidge(
 		  sf::Vector2i variation;
 
 		  do{
+				// curving ridges
 				variation.x = RandomI(std::round(length(distance(start, end))
 															* (hSettings.hexWidth -  hSettings.hexQuarter)
 															* -gSettings.deviation),
@@ -119,22 +116,24 @@ std::map<Coords, tempHex> createRidge(
 
 				middlePixel += variation;
 				middle = centerToCoords(hSettings, middlePixel);
-				
-		  }while(length(middle) > gSettings.radius || middle == start || middle == end);
+
+				//checking if in bounds
+		  }while(length(middle) > gSettings.mapRadius || middle == start || middle == end);
 		  
-		  result.insert(std::pair<Coords, tempHex>(middle, {3, 0}));
-		  
-		  addToMap(result, createRidge(hSettings, gSettings, start , middle));
-		  addToMap(result, createRidge(hSettings, gSettings, middle, end   ));
+		  result.insert(std::pair<Coords, Hex>(middle, {hSettings, middle, 0, 3}));
+
+		  // recurrently generate next
+		  addToMap(result, createRidge(hSettings, gSettings, start , middle), hSettings);
+		  addToMap(result, createRidge(hSettings, gSettings, middle, end   ), hSettings);
 	 }
 
 	 return result;
 }
 
-std::map<Coords, tempHex> generateHeight(hexSettings& hSettings, genSettings& gSettings,
-													  std::map<Coords, tempHex> mountains)
+std::map<Coords, Hex> generateHeight(hexSettings& hSettings, genSettings& gSettings,
+													  std::map<Coords, Hex> mountains)
 {
-	 std::map<Coords, tempHex> result;
+	 std::map<Coords, Hex> result;
 	 std::priority_queue<std::pair<Coords, int>, std::vector<std::pair<Coords, int>>, heightComp>
 		  toExamine;
 	 std::map<Coords, bool> visited;
@@ -145,13 +144,15 @@ std::map<Coords, tempHex> generateHeight(hexSettings& hSettings, genSettings& gS
 
 	 for(auto it = mountains.begin(); it != mountains.end(); ++it)
 	 {
-		  result.insert(std::pair<Coords, tempHex>(it->first, {4, gSettings.mountainHeight}));
-		  toExamine.emplace(std::pair<Coords, int>(it->first, it->second.height));
+		  result.insert(std::pair<Coords, Hex>
+							 (it->first, {hSettings, it->first, gSettings.mountainHeight, 4}));
+		  toExamine.emplace(std::pair<Coords, int>(it->first, gSettings.mountainHeight));
 	 }
 
 	 while(toExamine.size() > 0)
 	 {
 		  examined = toExamine.top().first;
+		  //std::cout << result.at(examined).getHeight();
 		  toExamine.pop();
 
 		  if(visited.find(examined) == visited.end())
@@ -159,20 +160,23 @@ std::map<Coords, tempHex> generateHeight(hexSettings& hSettings, genSettings& gS
 				for(int i = 0; i < 6; ++i)
 				{
 					 neighbour = examined + direction(i);
-					 if(length(neighbour) <= gSettings.radius && visited.find(neighbour) == visited.end())
+					 if(length(neighbour) <= gSettings.mapRadius && visited.find(neighbour) == visited.end())
 					 {
-						  height = randomFromDist(0, 1, gSettings.heightProb[result[examined].height]);
+						  height = randomFromDist(0, 1, gSettings.heightProb[result.at(examined).getHeight()]);
 						 
 						  if(result.find(neighbour) != result.end())
 						  {
-								result[neighbour].height = std::max(result[neighbour].height, height);
+								result.at(neighbour).setHeight(
+									 std::max(result.at(neighbour).getHeight(), height));
 						  }
-						  else result[neighbour] = {1, height};
+						  else result.insert(std::pair<Coords, Hex>(neighbour,
+																				  {hSettings, neighbour, height, 1}));
 					 
-						  if(result[neighbour].height == gSettings.mountainHeight) result[neighbour].type = 4;
-						  if(result[neighbour].height > 0)
+						  if(result.at(neighbour).getHeight() == gSettings.mountainHeight)
+								result.at(neighbour).setType(4);
+						  if(result.at(neighbour).getHeight() > 0)
 						  {
-								toExamine.emplace(neighbour, result[neighbour].height);
+								toExamine.emplace(neighbour, result.at(neighbour).getHeight());
 						  }
 					 }
 				}
@@ -190,12 +194,12 @@ std::map<Coords, tempHex> generateHeight(hexSettings& hSettings, genSettings& gS
 				{
 					 for(int i = 0; i < ring; ++i)
 					 {
-						  if(length(pos) <= gSettings.radius)
+						  if(length(pos) <= gSettings.mapRadius)
 						  {
 								height = randomFromDist(0, 1, heightProb[gSettings.heightOfRings[ring-1];
 								if(temp.find(pos) != temp.end())
 								{
-									 temp[pos].height = std::max(temp[pos].height, height);
+									 temp[pos].setHeight(std::max(temp[pos].getHeight(), height));
 								}
 								else temp[pos] = {0, height};
 						  }
@@ -207,41 +211,41 @@ std::map<Coords, tempHex> generateHeight(hexSettings& hSettings, genSettings& gS
 		  }
 		  }*/
 
-	 pos = gSettings.start;
-	 for(int ring = 0; ring <= gSettings.radius; ++ring)
+	 /*pos = gSettings.start;
+	 for(int ring = 0; ring <= gSettings.mapRadius; ++ring)
 	 {
 		  for(int turn = 0; turn < 6; ++turn)
 		  {
 				if(ring == 0)
 				{
 					 if(result.find(pos) == result.end()) result[pos] = {0, 0};
-					 else if(result[pos].height == 0) result[pos].type = 0;
+					 else if(result[pos].getHeight() == 0) result[pos].setType() = 0;
 				}
 				
 				for(int i = 0; i < ring; ++i)
 				{
 					 if(result.find(pos) == result.end()) result[pos] = {0, 0};
-					 else if(result[pos].height == 0) result[pos].type = 0;
+					 else if(result[pos].getHeight() == 0) result[pos].setType() = 0;
 					 
 					 pos += direction(turn);
 				}
 		  }
 		  pos += direction(4);		  
-	 }
+	 }*/
 
 	 return result;
 }
 
-std::map<Coords, tempHex> generateMountains(hexSettings& hSettings, genSettings& gSettings,
-														  std::vector<Coords>& mountains)
+std::map<Coords, Hex> generateMountains(hexSettings& hSettings, genSettings& gSettings)
 {
-	 std::map<Coords, tempHex> result;
+	 std::map<Coords, Hex> result;
 	 Coords start(0, 0);
 	 Coords end(0, 0);
 	 int count = 0;
 
 	 for(int i = 0; i < gSettings.TORidges; ++i)
 	 {
+		  // randomizing start and end points until they're close enough
 		  do{
 				start = randomCoord(gSettings.mountainRadius, gSettings.start);
 				end   = randomCoord(gSettings.mountainRadius, gSettings.start);
@@ -249,16 +253,126 @@ std::map<Coords, tempHex> generateMountains(hexSettings& hSettings, genSettings&
 				
 		  start.print();
 		  end.print();
-		  addToMap(result, createRidge(hSettings, gSettings, start, end));
+		  addToMap(result, createRidge(hSettings, gSettings, start, end), hSettings);
 	 }
-
-	 for(auto it = result.begin(); it != result.end(); ++it)
-	 {
-		  mountains.push_back(it->first);
-	 }
+	 
 	 result = generateHeight(hSettings, gSettings, result);
 
 	 return result;
+}
+
+std::vector<Coords> getNeighbours(std::map<Coords, Hex>& map, Coords start, int radius)
+{
+	 std::vector<Coords> result;
+	 
+	 for(int i = 0; i < 6; ++i)
+	 {
+		  if(length(start + direction(i)) <= radius)
+		  {
+				result.emplace_back(start + direction(i));
+		  }
+	 }
+
+	 return result;
+}
+
+std::vector<int> countNeighbours(std::map<Coords, Hex>& map, Coords start, int radius)
+{
+	 std::vector<int> result(6, 0);
+	 std::vector<Coords> neighbours = getNeighbours(map, start, radius);
+	 
+	 for(int i = 0; i < neighbours.size(); ++i)
+	 {
+		  ++result[map.at(neighbours[i]).getType()];
+	 }
+
+	 return result;
+}
+
+void generateShape(genSettings& gSettings, std::map<Coords, Hex>& result)
+{
+	 Coords pos = gSettings.start;
+
+	 // creating the shape
+	 //std::cout << "OY THERE GOVENOR" << std::endl;
+	 for(int ring = 0; ring <= gSettings.coastline; ++ring)
+	 {
+		  for(int turn = 0; turn < 6; ++turn)
+		  {
+				if(ring == 0)
+				{
+					 if(result.at(pos).getType() == 0) result.at(pos).setType(1);
+				}
+				
+				for(int i = 0; i < ring; ++i)
+				{
+					 if(result.at(pos).getType() == 0) result.at(pos).setType(1);
+					 
+					 pos += direction(turn);
+				}
+		  }
+		  pos += direction(4);		  
+	 }
+
+	 // building up the shape (without exceeding certain radius)
+	 for(int i = 0; i < gSettings.TOBuildups; ++i)
+	 {
+		  pos = gSettings.start;
+		  for(int ring = 0; ring <= gSettings.landRadius; ++ring)
+		  {
+				for(int turn = 0; turn < 6; ++turn)
+				{
+					 if(ring == 0)
+					 {
+						  if(result.at(pos).getType() == 0 &&
+							  RandomF(0.001f, 1.f, 0.001f) <=
+							  gSettings.buildupProb[countNeighbours(result, pos, gSettings.mapRadius)[1]])
+								result.at(pos).setType(1);
+					 }
+				
+					 for(int i = 0; i < ring; ++i)
+					 {
+						  if(result.at(pos).getType() == 0 &&
+							  RandomF(0.001f, 1.f, 0.001f) <=
+							  gSettings.buildupProb[countNeighbours(result, pos, gSettings.mapRadius)[1]])
+								result.at(pos).setType(1);
+					 
+						  pos += direction(turn);
+					 }
+				}
+				pos += direction(4);		  
+		  }
+	 }
+
+	 // eroding the shape (without touching higher hexes)
+	 for(int i = 0; i < gSettings.TOErosions; ++i)
+	 {
+		  pos = gSettings.start;
+		  for(int ring = 0; ring <= gSettings.landRadius; ++ring)
+		  {
+				for(int turn = 0; turn < 6; ++turn)
+				{
+					 if(ring == 0)
+					 {
+						  if(result.at(pos).getType() == 1 && result.at(pos).getHeight() == 0 &&
+							  RandomF(0.001f, 1.f, 0.001f) <=
+							  gSettings.erosionProb[countNeighbours(result, pos, gSettings.mapRadius)[0]])
+								result.at(pos).setType(0);
+					 }
+				
+					 for(int i = 0; i < ring; ++i)
+					 {
+						  if(result.at(pos).getType() == 1 && result.at(pos).getHeight() == 0 &&
+							  RandomF(0.001f, 1.f, 0.001f) <= 
+							  gSettings.erosionProb[countNeighbours(result, pos, gSettings.mapRadius)[0]])
+								result.at(pos).setType(0);
+					 
+						  pos += direction(turn);
+					 }
+				}
+				pos += direction(4);		  
+		  }
+	 }
 }
 
 bool closerToZero(const int& a, const int& b)
@@ -266,77 +380,105 @@ bool closerToZero(const int& a, const int& b)
 	 return (abs(a) < abs(b));
 }
 
-void generateRivers(genSettings& gSettings, std::map<Coords, tempHex>& result,
-													  std::vector<Coords>& mountains)
+void generateRivers(genSettings& gSettings, std::map<Coords, Hex>& result)
 {
-	 Coords curr(0, 0);
+	 Coords start(0, 0);
+	 Coords pos(0, 0);
 	 int dir = RandomI(0, 5);
-	 std::vector< std::vector<int> > heights(6, std::vector<int>(0));
+	 int step = 0;
+	 std::vector<int> temp;
+	 std::vector< std::vector<int> > heights(7, std::vector<int>(0));
 	 std::map<Coords, bool> visited;
 	 Coords neighbour(0, 0);
+	 bool illegalRiver = false; // river that has to rise or pass through mountains
+	 bool metOther = false; // met other river
+	 //std::vector<Coords> neighbours;
 
 	 for(int i = 0; i < gSettings.TORivers; ++i)
 	 {
-		  curr = mountains[RandomI(0, mountains.size()-1)];
-		  visited.clear();
+		  do{
+				temp.clear();
+				do{
+					 start = randomCoord(gSettings.coastline);
+				}while(result.at(start).getType() == 0 ||
+						 result.at(start).getWater().size() > 0 ||
+						 (result.at(start).getType() != 4 &&
+						  countNeighbours(result, start, gSettings.mapRadius)[4] == 0));
 
-		  while(result[curr].height > 0)
-		  {
-				for(int j = 0; j <= 5; ++j)
-				{
-					 heights[j].clear();
-				}
-
-				//--result[curr].height;
-				visited[curr] = true;
+				pos = start;
+				step = 0;
 				
-				for(int j = 0; j < 6; ++j)
-				{
-					 neighbour = curr + direction(j);
-					 if(length(neighbour) <= gSettings.radius && visited.find(neighbour) == visited.end())
+				visited.clear();
+
+				do{
+					 illegalRiver = true;
+					 metOther = false;
+					 visited[pos] = true;
+
+					 if(RandomF(0.001f, 1.0f, 0.001f) <= gSettings.meanderFreq[step])
 					 {
-						  heights[result[neighbour].height].emplace_back(j - dir);
+						  step = 0;
+						  if(RandomB()) dir = (dir + 1) % 6;
+						  else dir = (dir + 5) % 6;
 					 }
-				}
-
-				for(int j = 0; j <= 5; ++j)
-				{
-					 if(heights[j].size() > 0)
+				
+					 for(int j = 0; j <= 6; ++j)
 					 {
-						  heights[j] = Choose(heights[j], heights[j].size());
-						  sort(heights[j].begin(), heights[j].end(), closerToZero);
-
-
-						  dir += heights[j][0];
-						  std::cout << dir;
-						  result[curr].water.emplace_back((dir) % 6);
-						  curr += direction(dir);
-						  result[curr].water.emplace_back((dir + 3) % 6);
-						  std::cout << dir << std::endl;
-						  break;
+						  heights[j].clear();
 					 }
-				}
+				
+					 for(int j = 0; j < 6; ++j)
+					 {
+						  neighbour = pos + direction(j);
+						  if(length(neighbour) <= gSettings.mapRadius &&
+							  visited.find(neighbour) == visited.end() &&
+							  result.at(neighbour).getType() != 4 &&
+							  result.at(neighbour).getHeight() <= result.at(pos).getHeight())
+						  {
+								if(result.at(neighbour).getType() == 0) heights[0].emplace_back(j - dir);
+								else heights[result.at(neighbour).getHeight() + 1].emplace_back(j - dir);
+						  }
+					 }
+
+					 for(int j = 0; j <= 6; ++j)
+					 {
+						  if(heights[j].size() > 0)
+						  {
+								illegalRiver = false;
+								heights[j] = Choose(heights[j], heights[j].size());
+								sort(heights[j].begin(), heights[j].end(), closerToZero);
+								dir += heights[j][0];
+								
+								temp.emplace_back(dir);
+								pos += direction(dir);
+								break;
+						  }
+					 }
+					 ++step;
+					 if(result.at(pos).getWater().size() > 1) metOther = true;
+					 
+				}while(result.at(pos).getType() != 0 && illegalRiver == false && metOther == false);
+		  }while(illegalRiver == true);
+
+		  pos = start;
+		  for(int i = 0; i < temp.size(); ++i)
+		  {
+				result.at(pos).addWater(temp[i]);
+				pos += direction(temp[i]);
+				result.at(pos).addWater((temp[i] + 3) % 6);
 		  }
 	 }
-	 std::cout << "'Ere'" << std::endl;
 }
 
-void generate(std::map<Coords, tempHex>& result, hexSettings& hSettings, genSettings& gSettings)
-{
-	 std::vector<Coords> mountains;
-		  
-	 initArea(hSettings, result, gSettings.start, gSettings.radius);
+void generate(std::map<Coords, Hex>& result, hexSettings& hSettings, genSettings& gSettings)
+{		  
+	 initArea(hSettings, result, gSettings.start, gSettings.mapRadius);
 
-	 addToMap(result, generateMountains(hSettings, gSettings, mountains));
+	 //markOceans(gSettings, result);
 
-	 generateRivers(gSettings, result, mountains);
+	 addToMap(result, generateMountains(hSettings, gSettings), hSettings);
 
-	 result[direction(0)].type = 0;
-	 result[direction(1)].type = 1;
-	 result[direction(2)].type = 2;
-	 result[direction(3)].type = 3;
-	 result[direction(4)].type = 4;
-	 result[direction(5)].type = 5;
-	 
-	 std::cout << "'Ere'" << std::endl;
+	 generateShape(gSettings, result);
+
+	 generateRivers(gSettings, result);
 }
