@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <queue>
 
+#include "FastNoise/FastNoise.h"
 #include "tom.hpp"
 #include "hex.hpp"
 #include "generator.hpp"
@@ -52,19 +53,31 @@ int main()
 		  0.01f,                             // zoomSpeed
 		  resolution,                        // viewSize
 		  sf::FloatRect(0.f, 0.f, 1.f, 1.f), // viewPort
-		  "data/tileset.png",                // filename
+		  "data/tileset2.png",                // filename
 		  10,                                // pixelsPerLevel
 		  0.05f                              // lightPerHeight
 	 };
+
+	 int heightSeed = rand();
+	 int temperatureSeed = rand();
+	 int moistureSeed = rand();
 	 
 	 genSettings genData = {
+		  heightSeed,                                       // heightSeed
+		  temperatureSeed,                                  // temperatureSeed
+		  moistureSeed,                                     // moistureSeed
+		  4.0f,                                             // heightFreq
+		  32,                                               // heightOcts
+		  2,                                                // heightAmplitude
+		  -2.f,                                             // heightAtSea
+		  1.f,                                              // heightAtLand
 		  /*0,
 		  1,
 		  5,
 		  4,
-		  */
+		  3,*/
 		  48,                                               // mapRadius
-		  47,                                               // landRadius
+		  24,                                               // landRadius
 	 	  30,                                               // coastline
 		  30,                                               // mountainsRadius
 	 	  6,                                                // TORidges
@@ -82,7 +95,8 @@ int main()
 		  6,                                                // TOErosions
 	     {0.001f, 0.4f, 0.5f, 0.75f, 0.9f, 0.99f, 0.999f}, // erosionProb
 		  12,                                                // TORivers
-		  {0.f, 0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f},        // meanderFreq
+		  {0.f, 0.7f, 0.7f, 0.4f, 0.6f, 0.9f, 1.0f},        // meanderFreq
+		  //{0.f, 0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f},        // meanderFreq
 		  Coords(0, 0)                                      // start
 	 };
 
@@ -132,10 +146,18 @@ int main()
 													 window.close();
 													 exit = true;
 													 break;
-													 /*case sf::Keyboard::Tab:
-														++mapMode;
-														mapMode %= TOModes;
-														break;*/
+												case sf::Keyboard::Num1:
+													 testMap.setMode(DisplayMode::Textured);
+													 break;
+												case sf::Keyboard::Num2:
+													 testMap.setMode(DisplayMode::Elevation);
+													 break;
+												case sf::Keyboard::Num3:
+													 testMap.setMode(DisplayMode::Temperature);
+													 break;
+												case sf::Keyboard::Num4:
+													 testMap.setMode(DisplayMode::Moisture);
+													 break;
 										  }
 									 }
 									 break;

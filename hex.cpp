@@ -121,20 +121,20 @@ int length(Coords a)
 
 
 
-Hex::Hex(hexSettings& settings, Coords coords, int height, int type, std::vector<int> water,
-			std::vector<int> borders):
+Hex::Hex(hexSettings& settings, Coords coords, int type, int height, int temperature, int moisture,
+			std::vector<int> water, std::vector<int> borders):
 	 m_settings(settings),
 	 m_coords(coords),
+	 m_temperature(temperature),
+	 m_moisture(moisture),
 	 m_water(water)
 {
 	 // Representation intializations
-	 //std::cout << type << std::endl;
 	 setType(type);
 	 setHeight(height);
 	 for(int i=0; i<6; ++i)
 	 {
 		  m_borders.push_back(-1);
-		  //SHexBorders.push_back(sf::Sprite());
 		  setBorder(i, borders[i]);
 	 }
 }
@@ -147,6 +147,16 @@ void Hex::setType(int type)
 void Hex::setHeight(int height)
 {
 	 m_height = height;
+}
+
+void Hex::setTemperature(int temperature)
+{
+	 m_temperature = temperature;
+}
+
+void Hex::setMoisture(int moisture)
+{
+	 m_moisture = moisture;
 }
 
 void Hex::addWater(int water)

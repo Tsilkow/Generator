@@ -81,8 +81,10 @@ class Hex
 	 private:
 	 hexSettings m_settings;
 	 Coords m_coords;
-	 int m_height;
 	 int m_type;
+	 int m_height;
+	 int m_temperature;
+	 int m_moisture;
 	 std::vector<int> m_water;
 	 int m_building;
 	 std::vector<int> m_borders;
@@ -90,12 +92,16 @@ class Hex
 	 public:
 	 //Hex() {; }
 		  
-	 Hex(hexSettings& settings, Coords coords, int height = 0, int type = 0, std::vector<int> water = {},
-		  std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
+	 Hex(hexSettings& settings, Coords coords, int type = 0, int height = 0, int temperature = 0,
+		  int moisture = 0, std::vector<int> water = {}, std::vector<int> borders = {-1, -1, -1, -1, -1, -1});
 
 	 void setType(int type);
 	 
 	 void setHeight(int height);
+	 
+	 void setTemperature(int temperature);
+		  
+	 void setMoisture(int moisture);
 	 
 	 void addWater(int newWater);
 
@@ -105,12 +111,18 @@ class Hex
 	 
 	 const Coords& getCoords()
 		  {return m_coords; }
-
-	 const int& getHeight()
-		  {return m_height; }
 	 
 	 const int& getType()
 		  {return m_type; }
+
+	 const int& getHeight()
+		  {return m_height; }
+
+	 const int& getTemperature()
+		  {return m_temperature; }
+
+	 const int& getMoisture()
+		  {return m_moisture; }
 
 	 const std::vector<int>& getWater()
 		  {return m_water; }

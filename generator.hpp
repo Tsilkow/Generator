@@ -12,6 +12,14 @@
 
 struct genSettings
 {
+	 int heightSeed;
+	 int temperatureSeed;
+	 int moistureSeed;
+	 float heightFreq;
+	 int heightOcts;
+	 float heightAmplitude;
+	 float heightAtSea;
+	 float heightAtLand;
 	 int mapRadius;
 	 int landRadius;
 	 int coastline;
@@ -65,5 +73,13 @@ void generateShape(genSettings& gSettings, std::map<Coords, Hex>& result);
 bool closerToZero(const int& a, const int& b);
 
 void generateRivers(genSettings& gSettings, std::map<Coords, Hex>& result);
+
+struct secondComp
+{
+	 bool operator()(const std::pair<Coords, int>& a, const std::pair<Coords, int>& b)
+		  {
+				return (a.second < b.second);
+		  }
+};
 
 void generate(std::map<Coords, Hex>& result, hexSettings& hSettings, genSettings& gSettings);

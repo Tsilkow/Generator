@@ -26,16 +26,23 @@ struct mapSettings // parameters that govern how the map is
 	 float lightPerHeight;
 };
 
+enum DisplayMode {Textured, Elevation, Temperature, Moisture};
 
 class TileMap: public sf::Drawable, public sf::Transformable
 {
 	 public:
-	 bool load(hexSettings& hSettings, mapSettings& mSettings, std::map<Coords, Hex>& hexes);
+	 bool load(hexSettings& gSetts, mapSettings& mSetts, std::map<Coords, Hex>& hexes);
+
+	 void setMode(DisplayMode mode);
 	 
 	 private:
 	 virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const;
-	 
-    sf::VertexArray m_vertices;
+
+	 sf::VertexArray m_defaultMap;
+	 sf::VertexArray m_elevationMap;
+	 sf::VertexArray m_temperatureMap;
+	 sf::VertexArray m_moistureMap;
+	 DisplayMode m_mode;
     sf::Texture m_tileset;
 };
 				  
@@ -75,7 +82,7 @@ class HexMap
 	 TileMap m_tilemap;
 
 	 public:
-	 HexMap(hexSettings& hSettings, mapSettings& mSettings, genSettings& gSettings, Coords start = {0, 0});
+	 HexMap(hexSettings& hSetts, mapSettings& mSetts, genSettings& gSetts, Coords start = {0, 0});
 		  
 	 bool setType(Coords coords, int type);
 
@@ -94,7 +101,7 @@ class HexMap
 
 	 void createMap();
 
-	 void switchMode(int newMode) {m_mode = newMode; }
+	 void setMode(DisplayMode mode) {m_tilemap.setMode(mode); }
 
 	 bool moveScreen(sf::Vector2f direction);
 	 

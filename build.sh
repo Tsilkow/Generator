@@ -7,21 +7,25 @@ gdbFlag="-g -ggdb -gstabs";
 inputAndOutput="2>&1";
 finalCompilation="main.cpp -o Hex\ Enclave libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
-itemName[1]="tom";
-attributes[1]="\E[1m\E[97m";
-itemCompilation[1]="-c tom.cpp -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+itemName[1]="FastNoise";
+attributes[1]="\E[1m\E[37m";
+itemCompilation[1]="-c FastNoise/FastNoise.cpp";
 
-itemName[2]="hex";
-attributes[2]="\E[1m\E[34m";
-itemCompilation[2]="-c hex.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+itemName[2]="tom";
+attributes[2]="\E[1m\E[97m";
+itemCompilation[2]="-c tom.cpp -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
-itemName[3]="generator";
-attributes[3]="\E[1m\E[93m";
-itemCompilation[3]="-c generator.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+itemName[3]="hex";
+attributes[3]="\E[1m\E[34m";
+itemCompilation[3]="-c hex.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
-itemName[4]="hexmap";
-attributes[4]="\E[1m\E[94m";
-itemCompilation[4]="-c hexmap.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+itemName[4]="generator";
+attributes[4]="\E[1m\E[93m";
+itemCompilation[4]="-c generator.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
+
+itemName[5]="hexmap";
+attributes[5]="\E[1m\E[94m";
+itemCompilation[5]="-c hexmap.cpp libraries.a -lsfml-graphics -lsfml-system -lsfml-window -lsfml-audio";
 
 function compileLibrary
 {

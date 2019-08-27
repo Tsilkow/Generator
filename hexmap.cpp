@@ -10,56 +10,160 @@
 #include "hexmap.hpp"
 
 
-bool TileMap::load(hexSettings& hSettings, mapSettings& mSettings, std::map<Coords, Hex>& hexes)
+void createGradient(std::vector<sf::Color>& result, sf::Color start, sf::Color end, int total)
 {
+	 sf::Color temp = start;
+	 
+	 result.emplace_back(start);
+	 for(int i = 1; i < total-1; ++i)
+	 {
+		  temp = sf::Color(
+				std::max(0, std::min(255, (int)std::round((((float)end.r) - start.r) / (total-1) + temp.r))),
+				std::max(0, std::min(255, (int)std::round((((float)end.g) - start.g) / (total-1) + temp.g))),
+				std::max(0, std::min(255, (int)std::round((((float)end.b) - start.b) / (total-1) + temp.b))));
+
+		  result.emplace_back(temp);
+	 }
+	 result.emplace_back(end);
+}
+
+bool TileMap::load(hexSettings& hSetts, mapSettings& mSetts, std::map<Coords, Hex>& hexes)
+{
+	 setMode(DisplayMode::Textured);
+	 
+	 sf::Vector2f tileSize(hSetts.hexWidth  + 2 * hSetts.hexOffset,
+								  hSetts.hexHeight + 2 * hSetts.hexOffset);
 	 float heightLight;
-	 
-	 sf::Vector2f tileSize(hSettings.hexWidth  + 2 * hSettings.hexOffset,
-								  hSettings.hexHeight + 2 * hSettings.hexOffset);
-	 
-	 // load the tileset texture
-	 if(!m_tileset.loadFromFile(mSettings.filename)) return false;
+	 int height;
+	 std::vector<sf::Vector2f> position(4);
+	 std::vector<sf::Vector2f> texPos(4);
+	 std::vector<sf::Vector2f> riverPos(4);
+	 std::vector<sf::Vector2f> blankPos(4);
+	 std::vector<sf::Color> heightGradient;
+	 std::vector<sf::Color> elevationGradient;
+	 std::vector<sf::Color> temperatureGradient;
+	 std::vector<sf::Color> moistureGradient;
 
-	 // resize the vertex array to fit the level size
-	 m_vertices.setPrimitiveType(sf::Quads);
-	 //m_vertices.resize(hexes.size() * 4);
+	 createGradient(heightGradient, sf::Color(255, 255, 255), sf::Color(191, 191, 191), 6);
+	 createGradient(elevationGradient, sf::Color(255, 255, 255), sf::Color(64, 255, 64), 10);
+	 createGradient(temperatureGradient, sf::Color(255, 255, 255), sf::Color(255, 128, 0), 10);
+	 createGradient(moistureGradient, sf::Color(255, 255, 255), sf::Color(0, 128, 255), 10);
+	 
+	 if(!m_tileset.loadFromFile(mSetts.filename)) return false;
+	 m_defaultMap.setPrimitiveType(sf::Quads);
+	 m_elevationMap.setPrimitiveType(sf::Quads);
+	 m_temperatureMap.setPrimitiveType(sf::Quads);
+	 m_moistureMap.setPrimitiveType(sf::Quads);
 
-	 // populate the vertex array, with one quad per tile
 	 for(auto it = hexes.begin(); it != hexes.end(); ++it)
 	 {
-		  //std::cout << it->second.getType() << std::endl;
+		  position[0] = coordsToPixelF(hSetts, it->first) +
+				sf::Vector2f(0.f       ,            - it->second.getHeight() * mSetts.pixelsPerLevel);
 		  
-		  heightLight = std::round((std::max(1.f, 1.f - 5 * mSettings.lightPerHeight)
-											 - it->second.getHeight() * mSettings.lightPerHeight) * 255);
+		  position[1] = coordsToPixelF(hSetts, it->first) +
+				sf::Vector2f(tileSize.x,            - it->second.getHeight() * mSetts.pixelsPerLevel);
+		  
+		  position[2] = coordsToPixelF(hSetts, it->first) +
+				sf::Vector2f(tileSize.x, tileSize.y - it->second.getHeight() * mSetts.pixelsPerLevel);
+		  
+		  position[3] = coordsToPixelF(hSetts, it->first) +
+				sf::Vector2f(0.f       , tileSize.y - it->second.getHeight() * mSetts.pixelsPerLevel);
+
+		  texPos[0] = sf::Vector2f((it->second.getType()    ) * (tileSize.x + 1)    ,
+											(tileSize.y + 1)         );
+		  texPos[1] = sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1,
+											(tileSize.y + 1)        );
+		  texPos[2] = sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1,
+											(tileSize.y + 1) * 2 - 1);
+		  texPos[3] = sf::Vector2f((it->second.getType()    ) * (tileSize.x + 1)    ,
+											(tileSize.y + 1) * 2 - 1);
+		  
+		  blankPos[0] = sf::Vector2f(0.f       , 0.f       );
+		  blankPos[1] = sf::Vector2f(tileSize.x, 0.f       );
+		  blankPos[2] = sf::Vector2f(tileSize.x, tileSize.y);
+		  blankPos[3] = sf::Vector2f(0.f       , tileSize.y);
+
+		  for(int i = 0; i < 4; ++i)
+		  {
+				// textured map
+				m_defaultMap.append(
+					 sf::Vertex(position[i], heightGradient[it->second.getHeight()], texPos[i]));
+		  }
+
+		  for(int i = 0; i < 4; ++i)
+		  {
+				// map colored based on hex height
+				m_elevationMap.append(
+					 sf::Vertex(position[i], elevationGradient[it->second.getHeight()], blankPos[i]));
+		  }
+		  
+		  for(int i = 0; i < 4; ++i)
+		  {
+				// map colored based on hex temperature
+				m_temperatureMap.append(
+					 sf::Vertex(position[i], temperatureGradient[it->second.getTemperature()], blankPos[i]));
+		  }
+		  
+		  for(int i = 0; i < 4; ++i)
+		  {
+				// map colored based on hex moisture
+				m_moistureMap.append(
+					 sf::Vertex(position[i], moistureGradient[it->second.getMoisture()], blankPos[i]));
+		  }
+		  
+		  for(int i = 0; i < it->second.getWater().size(); ++i)
+		  {
+				riverPos[0] = sf::Vector2f((it->second.getWater()[i]    ) * (tileSize.x + 1)    ,
+													(tileSize.y + 1) * 3    );
+				riverPos[1] = sf::Vector2f((it->second.getWater()[i] + 1) * (tileSize.x + 1) - 1,
+													(tileSize.y + 1) * 3    );
+				riverPos[2] = sf::Vector2f((it->second.getWater()[i] + 1) * (tileSize.x + 1) - 1,
+													(tileSize.y + 1) * 4 - 1);
+				riverPos[3] = sf::Vector2f((it->second.getWater()[i]    ) * (tileSize.x + 1)    ,
+													(tileSize.y + 1) * 4 - 1);
+				
+				for(int j = 0; j < 4; ++j)
+				{
+					 // rivers on textured map
+					 m_defaultMap.append(
+						  sf::Vertex(position[j], riverPos[j]));
+
+					 // rivers on map colored based on hex moisture
+					 m_moistureMap.append(
+						  sf::Vertex(position[j], riverPos[j]));
+				}
+		  }
+
+		  /*
 		  // hex types
 		  m_vertices.append(sf::Vertex(
-										coordsToPixelF(hSettings, it->first) +
+										coordsToPixelF(hSetts, it->first) +
 										sf::Vector2f(0.f,
-														 -it->second.getHeight() * mSettings.pixelsPerLevel),
+														 -it->second.getHeight() * mSetts.pixelsPerLevel),
 										sf::Color(heightLight, heightLight, heightLight),
 										sf::Vector2f( it->second.getType()      * (tileSize.x + 1)    ,
 														  0.f)));
 		  
 		  m_vertices.append(sf::Vertex(
-										coordsToPixelF(hSettings, it->first) +
+										coordsToPixelF(hSetts, it->first) +
 										sf::Vector2f(tileSize.x,
-														 -it->second.getHeight() * mSettings.pixelsPerLevel),
+														 -it->second.getHeight() * mSetts.pixelsPerLevel),
 										sf::Color(heightLight, heightLight, heightLight),
 										sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1,
 														 0.f)));
 								  
 		  m_vertices.append(sf::Vertex(
-										coordsToPixelF(hSettings, it->first) +
+										coordsToPixelF(hSetts, it->first) +
 										sf::Vector2f(tileSize.x,
-														 tileSize.y - it->second.getHeight() * mSettings.pixelsPerLevel),
+														 tileSize.y - it->second.getHeight() * mSetts.pixelsPerLevel),
 										sf::Color(heightLight, heightLight, heightLight),
 										sf::Vector2f((it->second.getType() + 1) * (tileSize.x + 1) - 1,
 														 tileSize.y)));
 		  
 		  m_vertices.append(sf::Vertex(
-										coordsToPixelF(hSettings, it->first) +
+										coordsToPixelF(hSetts, it->first) +
 										sf::Vector2f(0.f,
-														 tileSize.y - it->second.getHeight() * mSettings.pixelsPerLevel),
+														 tileSize.y - it->second.getHeight() * mSetts.pixelsPerLevel),
 										sf::Color(heightLight, heightLight, heightLight),
 										sf::Vector2f( it->second.getType()      * (tileSize.x + 1)    ,
 														  tileSize.y)));
@@ -68,50 +172,59 @@ bool TileMap::load(hexSettings& hSettings, mapSettings& mSettings, std::map<Coor
 		  {
 				// rivers
 				m_vertices.append(sf::Vertex(
-											 coordsToPixelF(hSettings, it->first) +
+											 coordsToPixelF(hSetts, it->first) +
 											 sf::Vector2f(0.f,
-															  -it->second.getHeight() * mSettings.pixelsPerLevel),
+															  -it->second.getHeight() * mSetts.pixelsPerLevel),
 											 sf::Vector2f( it->second.getWater()[i]      * (tileSize.x + 1)    ,
 																(tileSize.y + 1) * 2)));
 		  
 				m_vertices.append(sf::Vertex(
-											 coordsToPixelF(hSettings, it->first) +
+											 coordsToPixelF(hSetts, it->first) +
 											 sf::Vector2f(tileSize.x,
-															  -it->second.getHeight() * mSettings.pixelsPerLevel),
+															  -it->second.getHeight() * mSetts.pixelsPerLevel),
 											 sf::Vector2f((it->second.getWater()[i] + 1) * (tileSize.x + 1) - 1,
 															  (tileSize.y + 1) * 2)));
 								  
 				m_vertices.append(sf::Vertex(
-											 coordsToPixelF(hSettings, it->first) +
+											 coordsToPixelF(hSetts, it->first) +
 											 sf::Vector2f(tileSize.x,
 															  tileSize.y - it->second.getHeight()
-															  * mSettings.pixelsPerLevel),
+															  * mSetts.pixelsPerLevel),
 											 sf::Vector2f((it->second.getWater()[i] + 1) * (tileSize.x + 1) - 1,
 															  (tileSize.y + 1) * 3 - 1)));
 		  
 				m_vertices.append(sf::Vertex(
-											 coordsToPixelF(hSettings, it->first) +
+											 coordsToPixelF(hSetts, it->first) +
 											 sf::Vector2f(0.f,
 															  tileSize.y - it->second.getHeight()
-															  * mSettings.pixelsPerLevel),
+															  * mSetts.pixelsPerLevel),
 											 sf::Vector2f( it->second.getWater()[i]      * (tileSize.x + 1)    ,
 																(tileSize.y + 1) * 3 - 1)));
 		  }
+		  */
 	 }
 
 	 return true;
+}
+
+void TileMap::setMode(DisplayMode mode)
+{
+	 m_mode = mode;
 }
 
 void TileMap::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	 // apply the transform
 	 states.transform *= getTransform();
-
-	 // apply the tileset texture
 	 states.texture = &m_tileset;
 
-	 // draw the vertex array
-	 target.draw(m_vertices, states);
+	 switch(m_mode)
+	 {
+		  case DisplayMode::Textured: target.draw(m_defaultMap, states); break;
+		  case DisplayMode::Elevation: target.draw(m_elevationMap, states); break;
+		  case DisplayMode::Temperature: target.draw(m_temperatureMap, states); break;
+		  case DisplayMode::Moisture: target.draw(m_moistureMap, states); break;
+	 }
 }
 
 /*std::vector<Coords> createRidge(Coords start, Coords end, float deviation)
@@ -123,9 +236,9 @@ void TileMap::draw(sf::RenderTarget& target, sf::RenderStates states) const
 }*/
 
 
-HexMap::HexMap(hexSettings& hSettings, mapSettings& mSettings, genSettings& gSettings, Coords start):
-	 m_hexSettings(hSettings),
-	 m_mapSettings(mSettings),
+HexMap::HexMap(hexSettings& hSetts, mapSettings& mSetts, genSettings& gSettings, Coords start):
+	 m_hexSettings(hSetts),
+	 m_mapSettings(mSetts),
 	 m_genSettings(gSettings),
 	 m_start(start),
 	 m_screenPos(0, 0),
@@ -208,8 +321,10 @@ void HexMap::createMap()
 
 		  //std::cout << it->second.getType() << std::endl;
 		  m_hexes.insert(std::pair<Coords, Hex>
-							  (it->first, Hex(m_hexSettings, it->first, it->second.getHeight(),
-													it->second.getType(), it->second.getWater())));
+							  (it->first,
+								Hex(m_hexSettings, it->first, it->second.getType(), it->second.getHeight(),
+									 it->second.getTemperature(), it->second.getMoisture(),
+									 it->second.getWater())));
 	 }
 }
 
