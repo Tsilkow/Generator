@@ -63,10 +63,10 @@ void initArea(hexSettings& hSetts, std::map<Coords, Hex>& result, Coords pos, in
 	 {
 		  for(int turn = 0; turn < 6; ++turn)
 		  {
-				if(ring == 0) result.insert(std::pair<Coords, Hex>(pos, {hSetts, pos, 1, 0}));
+				if(ring == 0) result.insert(std::pair<Coords, Hex>(pos, {hSetts, pos, 2, 0}));
 				for(int i = 0; i < ring; ++i)
 				{
-					 result.insert(std::pair<Coords, Hex>(pos, {hSetts, pos, 1, 0}));
+					 result.insert(std::pair<Coords, Hex>(pos, {hSetts, pos, 2, 0}));
 					 
 					 pos += direction(turn);
 				}
@@ -309,77 +309,107 @@ bool closerToZero(const int& a, const int& b)
 	 return (abs(a) < abs(b));
 }
 
-/*std::vector<Coords> considerLake(genSettings& gSetts, std::map<Coords, Hex>& result, Coords from)
+std::vector<Coords> considerLake(genSettings& gSetts, std::map<Coords, Hex>& result, Coords from)
 {
 	 std::queue<Coords> toExamine;
 	 std::map<Coords, bool> visited;
-	 std::vector<CoordS> lake;
+	 std::vector<Coords> lake;
 	 Coords examined;
 	 Coords neighbour;
+	 bool fall = false;
 
 	 toExamine.push(from);
 	 visited[from] = true;
 
-	 while(lake.size() <= gSetts.maxLakeSize && toExamine.size() > 0)
+	 while(lake.size() <= gSetts.maxLakeSize && toExamine.size() > 0 && !fall)
 	 {
-		  examined = toExamine;
+		  examined = toExamine.front();
 		  lake.push_back(examined);
 		  toExamine.pop();
+
+		  fall = false;
 
 		  for(int i = 0; i < 6; ++i)
 		  {
 				neighbour = examined + direction(i);
-				if(lenght(neighbour) <= gSetts.mapRadius && visited.find(neighbour) == visited.end() &&
+				if(result.at(neighbour).getHeight() < result.at(examined).getHeight()) fall = true;
+				else if(length(neighbour) <= gSetts.mapRadius && visited.find(neighbour) == visited.end() &&
 					result.at(neighbour).getHeight() == result.at(examined).getHeight())
 				{
 					 toExamine.push(neighbour);
 					 visited[neighbour] = true;
 				}
+				if(fall) break;
 		  }
 	 }
 
-	 if(lake.size() > gSetts.maxLakeSize) lake.clear();
+	 if(fall || lake.size() > gSetts.maxLakeSize) lake.clear();
 	 return lake;
-}*/
+}
 
 void generateRivers(genSettings& gSetts, std::map<Coords, Hex>& result)
 {
 	 Coords start(0, 0);
 	 Coords pos(0, 0);
+	 Coords temp(0, 0);
 	 int dir = RandomI(0, 5);
-	 int step = 0;
-	 std::vector<int> temp;
+	 int backstep = 0;
+	 int cutsSoFar = 0;
+	 std::vector<int> river;
+	 std::vector<Coords> lake;
+	 std::vector<Coords> toBeLakes;
 	 std::vector< std::vector<int> > heights(7, std::vector<int>(0));
 	 std::map<Coords, bool> visited;
+	 std::map<Coords, bool> inRiver;
+	 std::vector<Coords> riverSources; 
 	 Coords neighbour(0, 0);
 	 bool illegalRiver = false; // river that has to rise or pass through mountains
 	 bool metOther = false; // met other river
+	 bool lakeBetween = false; // found lake during de-meandering
+	 bool newStart = false;
 	 //std::vector<Coords> neighbours;
 
 	 for(int i = 0; i < gSetts.TORivers; ++i)
 	 {
 		  do{
-				temp.clear();
+				river.clear();
+				toBeLakes.clear();
 				do{
+					 newStart = false;
 					 start = randomCoord(gSetts.coastline);
-				}while(result.at(start).getType() == 0 ||
-						 result.at(start).getWater().size() > 0 ||
-						 (result.at(start).getType() != 3/* &&
-																		countNeighbours(result, start, gSetts.mapRadius)[4] == 0*/));
+					 if(result.at(start).getType() != 3 ||
+						 result.at(start).getWater().size() > 0)
+						  newStart = true;
+
+					 if(!newStart)
+					 {
+						  for(int i = 0; i < riverSources.size(); ++i)
+						  {
+								if(length(distance(riverSources[i], start)) <= gSetts.minRiverSourceDistance)
+								{
+									 newStart = true;
+									 break;
+								}
+						  }
+					 }
+				}while(newStart);
 
 				pos = start;
-				step = 0;
-				
+				cutsSoFar = 0;
+
 				visited.clear();
+				inRiver.clear();
+				toBeLakes.clear();
 
 				do{
-					 illegalRiver = true;
+					 illegalRiver = false;
 					 metOther = false;
 					 visited[pos] = true;
+					 result.at(pos).setTemperature(9);
+					 inRiver[pos] = true;
 
-					 if(RandomF(0.001f, 1.0f, 0.001f) <= gSetts.meanderFreq[step])
+					 if(RandomF(0.001f, 1.0f, 0.001f) <= gSetts.meanderFreq)
 					 {
-						  step = 0;
 						  if(RandomB()) dir = (dir + 1) % 6;
 						  else dir = (dir + 5) % 6;
 					 }
@@ -392,42 +422,121 @@ void generateRivers(genSettings& gSetts, std::map<Coords, Hex>& result)
 					 for(int j = 0; j < 6; ++j)
 					 {
 						  neighbour = pos + direction(j);
-						  if(length(neighbour) <= gSetts.mapRadius &&
-							  visited.find(neighbour) == visited.end() &&
-							  result.at(neighbour).getType() != 3 &&
-							  result.at(neighbour).getHeight() <= result.at(pos).getHeight())
+
+						  if(length(neighbour) <= gSetts.mapRadius) // in range
 						  {
-								if(result.at(neighbour).getType() == 0) heights[0].emplace_back(j - dir);
-								else heights[result.at(neighbour).getHeight() + 1].emplace_back(j - dir);
+								if(inRiver.find(neighbour) != inRiver.end() && inRiver[neighbour] == true)
+								{
+									 if((j + 3) % 6 != river[river.size()-1])
+									 {
+										  temp = pos; 
+										  lakeBetween = false;
+										  backstep = 0;
+										  if(toBeLakes.size() > 0)
+										  {
+												while(temp != neighbour)
+												{
+													 ++backstep;
+													 if(temp == toBeLakes.back())
+													 {
+														  lakeBetween = true;
+														  break;
+													 }
+													 temp += direction((river[river.size() - backstep] + 3) % 6);
+												}
+										  }
+
+										  if(!lakeBetween)
+										  {
+												++cutsSoFar;
+												if(cutsSoFar > gSetts.maxRiverCuts)
+												{
+													 illegalRiver = true;
+													 break;
+												}
+												
+												temp = pos;
+												while(temp != neighbour)
+												{
+													 inRiver[temp] = false;
+													 visited[temp] = false;
+													 temp += direction((river[river.size()-1] + 3) % 6);
+													 river.pop_back();
+												}
+											   inRiver[pos] = true;
+												river.push_back((j + 3) % 6);
+										  }
+									 }
+								}
+								
+								if((visited.find(neighbour) == visited.end() || visited[neighbour] == false) &&
+									result.at(neighbour).getType() != 3 && // not mountains
+									(result.at(neighbour).getHeight() <= result.at(pos).getHeight() || // not higher,
+									 considerLake(gSetts, result, pos).size() != 0)) // unless a lake is possible
+								{
+									 // prioritazing oceans, lakes and rivers
+									 if(result.at(neighbour).getType() <= 1 ||
+										 result.at(neighbour).getWater().size() > 1)
+										  heights[0].emplace_back(j - dir);
+									 else heights[result.at(neighbour).getHeight() + 1].emplace_back(j - dir);
+								}
 						  }
 					 }
 
-					 for(int j = 0; j <= 6; ++j)
+					 if(!illegalRiver)
 					 {
-						  if(heights[j].size() > 0)
+						  illegalRiver = true;
+						  for(int j = 0; j <= 6; ++j)
+						  {
+								if(heights[j].size() > 0)
+								{
+									 illegalRiver = false;
+									 heights[j] = Choose(heights[j], heights[j].size()); // randomize the order
+									 sort(heights[j].begin(), heights[j].end(), closerToZero);
+									 // order based on deviation from the direction
+									 dir += heights[j][0];
+
+									 // if choice needs a lake, declare one
+									 if(j-1 > result.at(pos).getHeight()) toBeLakes.push_back(pos);
+								
+									 river.emplace_back(dir);
+									 pos += direction(dir);
+									 break;
+								}
+						  }
+						  if(result.at(pos).getWater().size() > 1) metOther = true; // met other river
+						  if(illegalRiver == true && river.size() > 0) // illegal river, but maybe fixable
 						  {
 								illegalRiver = false;
-								heights[j] = Choose(heights[j], heights[j].size());
-								sort(heights[j].begin(), heights[j].end(), closerToZero);
-								dir += heights[j][0];
-								
-								temp.emplace_back(dir);
-								pos += direction(dir);
-								break;
+							   inRiver[pos] = false;
+								if(toBeLakes.size() > 0 && pos == toBeLakes.back()) toBeLakes.pop_back();
+								pos += direction((river[river.size() - 1] + 3) % 6);
+								river.pop_back();
 						  }
 					 }
-					 ++step;
-					 if(result.at(pos).getWater().size() > 1) metOther = true;
 					 
 				}while(result.at(pos).getType() != 0 && illegalRiver == false && metOther == false);
 		  }while(illegalRiver == true);
 
-		  pos = start;
-		  for(int i = 0; i < temp.size(); ++i)
+		  for(int i = 0; i < toBeLakes.size(); ++i)
 		  {
-				if(i != 0) result.at(pos).addWater(temp[i]);
-				pos += direction(temp[i]);
-				if(result.at(pos).getType() > 1) result.at(pos).addWater((temp[i] + 3) % 6);
+				// creating lakes
+				lake = considerLake(gSetts, result, toBeLakes[i]);
+
+				for(int j = 0; j < lake.size(); ++j)
+				{
+					 result.at(lake[j]).setType(1);
+					 result.at(lake[j]).setHeight(result.at(lake[j]).getHeight() + 1);
+				}
+		  }
+
+		  riverSources.push_back(start);
+		  pos = start;
+		  for(int i = 0; i < river.size(); ++i)
+		  {
+				if(result.at(pos).getType() > 1 && i != 0) result.at(pos).addWater(river[i]);
+				pos += direction(river[i]);
+				if(result.at(pos).getType() > 1) result.at(pos).addWater((river[i] + 3) % 6);
 		  }
 	 }
 }
@@ -462,10 +571,11 @@ void markOceans(genSettings& gSetts, std::map<Coords, Hex>& result)
 				neighbour = pos + direction(i);
 
 				if(length(neighbour) <= gSetts.mapRadius && visited.find(neighbour) == visited.end() &&
-				   result.at(neighbour).getType() == 1)
+				   result.at(neighbour).getHeight() < 0)
 				{
 					 toExamine.push(neighbour);
 					 result.at(neighbour).setType(0);
+					 result.at(neighbour).setHeight(0);
 				}
 		  }
 	 }
@@ -538,11 +648,11 @@ void generate(std::map<Coords, Hex>& result, hexSettings& hSetts, genSettings& g
 
 	 generateNoiseHeight(gSetts, result);
 
-	 generateShape(gSetts, result);
-
-	 markOceans(gSetts, result);
+	 //generateShape(gSetts, result);
 
 	 generateMountains(hSetts, gSetts, result);
+
+	 markOceans(gSetts, result);
 
 	 generateRivers(gSetts, result);
 

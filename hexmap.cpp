@@ -87,28 +87,32 @@ bool TileMap::load(hexSettings& hSetts, mapSettings& mSetts, std::map<Coords, He
 		  {
 				// textured map
 				m_defaultMap.append(
-					 sf::Vertex(position[i], heightGradient[it->second.getHeight()], texPos[i]));
+					 sf::Vertex(position[i], heightGradient[std::max(0, it->second.getHeight())],
+									texPos[i]));
 		  }
 
 		  for(int i = 0; i < 4; ++i)
 		  {
 				// map colored based on hex height
 				m_elevationMap.append(
-					 sf::Vertex(position[i], elevationGradient[it->second.getHeight()], blankPos[i]));
+					 sf::Vertex(position[i], elevationGradient[std::max(0, it->second.getHeight())],
+									blankPos[i]));
 		  }
 		  
 		  for(int i = 0; i < 4; ++i)
 		  {
 				// map colored based on hex temperature
 				m_temperatureMap.append(
-					 sf::Vertex(position[i], temperatureGradient[it->second.getTemperature()], blankPos[i]));
+					 sf::Vertex(position[i], temperatureGradient[std::max(0, it->second.getTemperature())],
+									blankPos[i]));
 		  }
 		  
 		  for(int i = 0; i < 4; ++i)
 		  {
 				// map colored based on hex moisture
 				m_moistureMap.append(
-					 sf::Vertex(position[i], moistureGradient[it->second.getMoisture()], blankPos[i]));
+					 sf::Vertex(position[i], moistureGradient[std::max(0, it->second.getMoisture())],
+									blankPos[i]));
 		  }
 		  
 		  for(int i = 0; i < it->second.getWater().size(); ++i)

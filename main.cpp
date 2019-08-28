@@ -90,13 +90,15 @@ int main()
 	  	   {0.f , 0.f , 0.9f, 0.1f , 0.f  , 0.f },          //           [3]
 	  	   {0.f , 0.f , 0.7f, 0.2f , 0.1f , 0.f },          //           [4]
 	  	   {0.f , 0.f , 0.f , 0.45f, 0.45f, 0.1f}},         //           [5]
-		  12,                                                // TOBuildups
+		  12,                                               // TOBuildups
 	     {0.f   , 0.1f, 0.25f, 0.5f, 0.8f, 0.99f, 0.999f}, // buildupProb
 		  6,                                                // TOErosions
 	     {0.001f, 0.4f, 0.5f, 0.75f, 0.9f, 0.99f, 0.999f}, // erosionProb
-		  12,                                                // TORivers
-		  {0.f, 0.7f, 0.7f, 0.4f, 0.6f, 0.9f, 1.0f},        // meanderFreq
-		  //{0.f, 0.1f, 0.3f, 0.5f, 0.7f, 0.9f, 1.0f},        // meanderFreq
+		  24,                                               // TORivers
+		  1,                                                // minRiverSourceDistance
+		  0.6f,                                             // meanderFreq
+		  128,                                              // maxRiverCuts
+		  24,                                               // maxLakeSize
 		  Coords(0, 0)                                      // start
 	 };
 

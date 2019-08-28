@@ -34,7 +34,10 @@ struct genSettings
 	 int TOErosions;
 	 std::vector<float> erosionProb;
 	 int TORivers;
-	 std::vector<float> meanderFreq;
+	 int minRiverSourceDistance;
+	 float meanderFreq;
+	 int maxRiverCuts;
+	 int maxLakeSize;
 	 Coords start;
 };
 
