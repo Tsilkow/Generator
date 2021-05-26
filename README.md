@@ -1,6 +1,6 @@
 
 # Generator
-Procedural generator of an island and its microclimates.
+Procedural generator of an island and its microclimates. \\
 Creates and simulates elevation, temperature, moisture and drainage. From these values it generates mountains, rivers, lakes, swamps and deserts. All this visualized on a hexmap.
 ### Terrain
 ![terrain](https://user-images.githubusercontent.com/69109124/114301265-6ee98f80-9ac4-11eb-901f-63b98f680334.png)
